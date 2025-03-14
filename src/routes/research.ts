@@ -62,31 +62,29 @@ export function createResearchRouter(researchService: ResearchService): Hono {
       const request = result.data as McpRequest;
       const researchResult = await researchService.research(request);
 
-      return researchResult.match(
-        (response) => {
-          const successResponse: ResearchSuccessResponse = {
-            status: "success",
-            result: response,
-          };
-          return c.json(successResponse);
-        },
-        (error) => {
-          const status = error.type === "validation" ? 400 : 500;
-          const errorResponse: ResearchErrorResponse = {
-            status: "error",
-            message: error.message,
-            type: error.type,
-            result: {
-              query: request.query,
-              searchResults: [],
-              summary: "",
-              insights: [],
-              sources: [],
-            },
-          };
-          return c.json(errorResponse, status);
-        },
-      );
+      if (researchResult.isOk()) {
+        const successResponse: ResearchSuccessResponse = {
+          status: "success",
+          result: researchResult.value,
+        };
+        return c.json(successResponse);
+      } else {
+        const error = researchResult.error;
+        const status = error.type === "validation" ? 400 : 500;
+        const errorResponse: ResearchErrorResponse = {
+          status: "error",
+          message: error.message,
+          type: error.type,
+          result: {
+            query: request.query,
+            searchResults: [],
+            summary: "",
+            insights: [],
+            sources: [],
+          },
+        };
+        return c.json(errorResponse, status);
+      }
     } catch (error) {
       const errorResponse: ResearchErrorResponse = {
         status: "error",

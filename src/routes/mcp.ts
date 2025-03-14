@@ -35,20 +35,18 @@ export function createMcpRouter(searchService: SearchService): Hono {
       const request = result.data as McpRequest;
       const searchResult = await searchService.searchMcp(request);
 
-      return searchResult.match(
-        (response) => {
-          return c.json(response as McpSuccessResponse);
-        },
-        (error) => {
-          const errorResponse: McpErrorResponse = {
-            status: "error",
-            message: error.type === "validation" ? error.message : "Search error",
-            results: [],
-            error: error.type === "search" ? error.details : undefined,
-          };
-          return c.json(errorResponse, error.type === "validation" ? 400 : 500);
-        },
-      );
+      if (searchResult.isOk()) {
+        return c.json(searchResult.value as McpSuccessResponse);
+      } else {
+        const error = searchResult.error;
+        const errorResponse: McpErrorResponse = {
+          status: "error",
+          message: error.type === "validation" ? error.message : "Search error",
+          results: [],
+          error: error.type === "search" ? error.details : undefined,
+        };
+        return c.json(errorResponse, error.type === "validation" ? 400 : 500);
+      }
     } catch (error) {
       const errorResponse: McpErrorResponse = {
         status: "error",
