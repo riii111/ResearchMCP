@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { z } from "npm:zod@3.22.4";
+import { z } from "zod";
 import { SearchService } from "../services/searchService.ts";
 import { McpErrorResponse, McpRequest, McpSuccessResponse } from "../models/mcp.ts";
 

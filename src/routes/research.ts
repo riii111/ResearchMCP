@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { z } from "npm:zod@3.22.4";
+import { z } from "zod";
 import { ResearchService } from "../services/researchService.ts";
 import { McpRequest } from "../models/mcp.ts";
 

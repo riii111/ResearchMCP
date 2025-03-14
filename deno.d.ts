@@ -106,18 +106,54 @@ declare module "neverthrow" {
 
 // Zod declarations
 declare module "zod" {
-  export interface ZodType<T> {
-    parse(data: unknown): T;
-    safeParse(data: unknown): { success: true; data: T } | { success: false; error: unknown };
+  export interface ZodError {
+    format(): Record<string, unknown>;
+    message: string;
   }
 
-  export function z(): ZodType<unknown>;
+  export interface ZodType<T> {
+    parse(data: unknown): T;
+    safeParse(data: unknown): { success: true; data: T } | { success: false; error: ZodError };
+    optional(): ZodType<T | undefined>;
+    nullable(): ZodType<T | null>;
+    min(min: number, message?: string): this;
+    max(max: number, message?: string): this;
+    length(len: number, message?: string): this;
+    default(value: T): ZodType<T>;
+  }
 
-  export const string: () => ZodType<string>;
-  export const number: () => ZodType<number>;
-  export const boolean: () => ZodType<boolean>;
-  export const object: <T extends Record<string, ZodType<unknown>>>(
-    shape: T,
-  ) => ZodType<{ [K in keyof T]: T[K] extends ZodType<infer U> ? U : never }>;
-  export const array: <T>(schema: ZodType<T>) => ZodType<T[]>;
+  export interface ZodString extends ZodType<string> {
+    min(min: number, message?: string): this;
+    max(max: number, message?: string): this;
+    length(len: number, message?: string): this;
+    email(message?: string): this;
+    url(message?: string): this;
+    regex(regex: RegExp, message?: string): this;
+  }
+
+  export interface ZodNumber extends ZodType<number> {
+    min(min: number, message?: string): this;
+    max(max: number, message?: string): this;
+    int(message?: string): this;
+    positive(message?: string): this;
+    nonnegative(message?: string): this;
+  }
+
+  export interface ZodObject<T> extends ZodType<T> {
+    shape: Record<string, ZodType<unknown>>;
+    extend<U>(shape: Record<string, ZodType<unknown>>): ZodObject<T & U>;
+    pick<K extends keyof T>(keys: K[]): ZodObject<Pick<T, K>>;
+    omit<K extends keyof T>(keys: K[]): ZodObject<Omit<T, K>>;
+  }
+
+  export const z: {
+    string(): ZodString;
+    number(): ZodNumber;
+    boolean(): ZodType<boolean>;
+    object<T extends Record<string, ZodType<unknown>>>(
+      shape: T,
+    ): ZodObject<{ [K in keyof T]: T[K] extends ZodType<infer U> ? U : never }>;
+    array<T>(schema: ZodType<T>): ZodType<T[]>;
+    enum<T extends [string, ...string[]]>(values: T): ZodType<T[number]>;
+  };
 }
