@@ -1,4 +1,4 @@
-.PHONY: start dev test lint format check d-build d-up d-down clean help
+.PHONY: start dev test lint format check d-build d-up d-down d-logs d-restart clean help
 
 # Default target
 .DEFAULT_GOAL := help
@@ -11,19 +11,26 @@ DOCKER_IMAGE = research-mcp
 help:
 	@echo "ResearchMCP Makefile Help"
 	@echo "--------------------------"
-	@echo "make start       - Run the application"
-	@echo "make dev         - Run the application in development mode with watch"
-	@echo "make test        - Run tests"
-	@echo "make lint        - Run linter"
-	@echo "make format      - Format code"
-	@echo "make check       - Type check"
+	@echo "Local Development Commands:"
+	@echo "make start       - Run the application locally"
+	@echo "make dev         - Run the application locally in development mode with watch"
+	@echo "make test        - Run tests locally"
+	@echo "make lint        - Run linter locally"
+	@echo "make format      - Format code locally"
+	@echo "make check       - Type check locally"
+	@echo "make local-init  - Initialize local development environment"
+	@echo "make local-dev   - Run local development server"
+	@echo "make local-test  - Run tests locally"
+	@echo
+	@echo "Docker Development Commands:"
 	@echo "make d-build     - Build Docker image"
-	@echo "make d-up        - Start Docker containers"
+	@echo "make d-up        - Start Docker containers in background"
+	@echo "make d-dev       - Start Docker containers in foreground (with logs)"
 	@echo "make d-down      - Stop Docker containers"
 	@echo "make d-logs      - View Docker logs"
-	@echo "make d-test      - Run tests in Docker"
-	@echo "make init        - Initialize development environment"
-	@echo "make dev-setup   - Reset and setup Docker environment for development"
+	@echo "make d-restart   - Restart Docker containers"
+	@echo
+	@echo "Utility Commands:"
 	@echo "make clean       - Clean temporary files"
 	@echo "make help        - Show this help message"
 
@@ -56,6 +63,16 @@ d-up:
 d-down:
 	docker compose -f $(COMPOSE_FILE) down -v
 
+d-logs:
+	docker compose -f $(COMPOSE_FILE) logs -f
+
+d-restart:
+	docker compose -f $(COMPOSE_FILE) restart
+
+# Run development server in foreground
+d-dev:
+	docker compose -f $(COMPOSE_FILE) up
+
 # Clean temporary files
 clean:
 	@echo "Cleaning temporary files..."
@@ -63,12 +80,6 @@ clean:
 	@echo "Done."
 
 # Docker utilities
-d-logs:
-	docker compose -f $(COMPOSE_FILE) logs -f
-
-d-restart:
-	docker compose -f $(COMPOSE_FILE) restart
-
 d-test:
 	docker compose -f $(COMPOSE_FILE) run --rm app deno test --allow-net --allow-env
 

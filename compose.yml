@@ -8,4 +8,12 @@ services:
     environment:
       - BRAVE_API_KEY=${BRAVE_API_KEY}
       - CLAUDE_API_KEY=${CLAUDE_API_KEY}
+    volumes:
+      - .:/app
+      - deno-cache:/home/deno/.cache/deno
+    command: run --watch --allow-net --allow-env main.ts
     restart: unless-stopped
+
+volumes:
+  deno-cache:
+    name: research-mcp-deno-cache

@@ -1,8 +1,15 @@
-FROM denoland/deno:alpine
+FROM denoland/deno:debian
 
 WORKDIR /app
 
-RUN apk --no-cache add ca-certificates
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    vim \
+    nano \
+    bash \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY deno.json ./
 

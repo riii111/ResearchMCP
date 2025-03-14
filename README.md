@@ -56,21 +56,67 @@ functionality equivalent to ChatGPT's DeepResearch.
 - `.rules/`: Project requirements and rules
 - `docker/`: Docker-related files
 
-## Development
+## Development Workflow
+
+### Local Development
+
+For local development without Docker:
+
+```bash
+# Start the development server with watch mode
+make dev
+
+# Run tests
+make test
+
+# Run linter
+make lint
+
+# Format code
+make format
+
+# Type check
+make check
+```
+
+### Docker-based Development
+
+For development inside Docker (recommended for consistent environment):
+
+```bash
+# Build the Docker image
+make d-build
+
+# Start the container in foreground with live reloading
+make d-dev
+
+# Run in background
+make d-up
+make d-logs
+
+# Stop the container
+make d-down
+```
+
+The Docker setup includes volume mounts for the project directory, so any code changes will be immediately reflected in the running container.
+
+## Hybrid Development Approach
+
+This project supports a hybrid development approach where you can:
+
+1. Use your local IDE/editor for code editing
+2. Run the application and tests either locally or in a container
+3. Share dependencies and configurations consistently
+
+Choose the workflow that best suits your preferences and needs.
+
+## Environment Variables
+
+Create a `.env` file with the following variables:
 
 ```
-deno task dev
+BRAVE_API_KEY=your_brave_search_api_key
+CLAUDE_API_KEY=your_claude_api_key
 ```
 
-## Test
-
-```
-deno task test
-```
-
-## Docker build && exec
-
-```
-docker build -t research-mcp .
-docker run -p 8000:8000 -e BRAVE_API_KEY=your_key research-mcp
-```
+These will be automatically loaded by Docker Compose in container mode.
