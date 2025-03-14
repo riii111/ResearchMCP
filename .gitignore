@@ -1,1 +1,28 @@
+# Deno
+.env
+.env.local
+.DS_Store
+
+# Dependencies
+/node_modules/
+/deno_modules/
+
+# Build
+/dist/
+/build/
+
+# Docker
+/docker/local_volume/
+
+# Logs
+/logs/
+*.log
+
+# Editor files
 .rules/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
