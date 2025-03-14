@@ -4,7 +4,9 @@
     "dev": "deno run --watch --allow-net --allow-env main.ts",
     "test": "deno test --allow-net --allow-env",
     "lint": "deno lint",
-    "fmt": "deno fmt"
+    "fmt": "deno fmt",
+    "check": "deno check **/*.ts",
+    "ci": "deno fmt --check && deno lint && deno check **/*.ts"
   },
   "fmt": {
     "indentWidth": 2,
@@ -13,9 +15,26 @@
     "useTabs": false,
     "semiColons": true
   },
+  "lint": {
+    "rules": {
+      "tags": ["recommended"],
+      "include": [
+        "ban-untagged-todo",
+        "no-explicit-any",
+        "no-throw-literal"
+      ]
+    }
+  },
   "imports": {
     "hono": "npm:hono@4.1.2",
+    "hono/": "npm:/hono@4.1.2/",
     "neverthrow": "npm:neverthrow@6.1.0",
-    "zod": "npm:zod@3.22.4"
+    "zod": "npm:zod@3.22.4",
+    "std/": "https://deno.land/std@0.211.0/"
+  },
+  "compilerOptions": {
+    "allowJs": true,
+    "lib": ["deno.window", "dom"],
+    "strict": true
   }
 }
