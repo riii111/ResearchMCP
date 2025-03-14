@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - BRAVE_API_KEY=${BRAVE_API_KEY}
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY}
+    volumes:
+      - ./src:/app/src
+      - ./main.ts:/app/main.ts
+      - ./deno.json:/app/deno.json
+    restart: unless-stopped
