@@ -1,5 +1,5 @@
 import { Result } from "neverthrow";
-import { QueryParams, SearchResponse, SearchError } from "../models/search.ts";
+import { QueryParams, SearchError, SearchResponse } from "../models/search.ts";
 
 export interface SearchAdapter {
   search(query: QueryParams): Promise<Result<SearchResponse, SearchError>>;

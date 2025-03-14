@@ -8,26 +8,27 @@ interface CacheEntry<T> {
 export class MemoryCacheAdapter implements CacheAdapter {
   private storage = new Map<string, CacheEntry<unknown>>();
 
-  async get<T>(key: string): Promise<T | undefined> {
+  get<T>(key: string): Promise<T | undefined> {
     const entry = this.storage.get(key) as CacheEntry<T> | undefined;
-    
+
     if (!entry) {
-      return undefined;
+      return Promise.resolve(undefined);
     }
 
     if (entry.expireAt < Date.now()) {
       this.storage.delete(key);
-      return undefined;
+      return Promise.resolve(undefined);
     }
 
-    return entry.value;
+    return Promise.resolve(entry.value);
   }
 
-  async set<T>(key: string, value: T, ttlMs = 60 * 60 * 1000): Promise<void> {
+  set<T>(key: string, value: T, ttlMs = 60 * 60 * 1000): Promise<void> {
     this.storage.set(key, {
       value,
       expireAt: Date.now() + ttlMs,
     });
+    return Promise.resolve();
   }
 
   clear(): void {

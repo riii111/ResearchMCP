@@ -22,36 +22,46 @@ declare namespace Deno {
   export function serve(options: ServeOptions): void;
   export function serve(
     handler: (request: Request) => Response | Promise<Response>,
-    options?: Omit<ServeOptions, "handler">
+    options?: Omit<ServeOptions, "handler">,
   ): void;
 }
 
 // Hono declarations
 declare module "hono" {
   import type { Context } from "npm:hono@4.1.2";
-  
-  export class Hono<Env = any, BasePath extends string = "/"> {
-    constructor(options?: any);
-    use(middleware: any, ...path: string[]): this;
-    get(path: string, ...handlers: any[]): this;
-    post(path: string, ...handlers: any[]): this;
-    put(path: string, ...handlers: any[]): this;
-    delete(path: string, ...handlers: any[]): this;
+
+  export type MiddlewareHandler<T = unknown> = (
+    ctx: Context,
+    next: () => Promise<void>,
+  ) => Promise<T | void>;
+  export type Handler<T = unknown> = (
+    ctx: Context,
+  ) => Promise<T | Response | void> | T | Response | void;
+
+  export class Hono<Env = Record<string, unknown>, BasePath extends string = "/"> {
+    constructor(options?: { strict?: boolean });
+    use(middleware: MiddlewareHandler, ...path: string[]): this;
+    get(path: string, ...handlers: Handler[]): this;
+    post(path: string, ...handlers: Handler[]): this;
+    put(path: string, ...handlers: Handler[]): this;
+    delete(path: string, ...handlers: Handler[]): this;
     route(path: string, app: Hono): this;
-    notFound(handler: any): this;
-    onError(handler: any): this;
+    notFound(handler: Handler): this;
+    onError(handler: (err: Error, ctx: Context) => Response | Promise<Response>): this;
     fetch(request: Request, env?: Env): Promise<Response>;
   }
-  
+
   export type { Context };
 }
 
 declare module "hono/logger" {
-  export function logger(): (ctx: any, next: () => Promise<void>) => Promise<void>;
+  import type { Context } from "npm:hono@4.1.2";
+  export function logger(): (ctx: Context, next: () => Promise<void>) => Promise<void>;
 }
 
 declare module "hono/secure-headers" {
-  export function secureHeaders(): (ctx: any, next: () => Promise<void>) => Promise<void>;
+  import type { Context } from "npm:hono@4.1.2";
+  export function secureHeaders(): (ctx: Context, next: () => Promise<void>) => Promise<void>;
 }
 
 // Neverthrow declarations
@@ -73,10 +83,18 @@ declare module "neverthrow" {
 
 // Zod declarations
 declare module "zod" {
-  export function z(): any;
-  export const string: () => any;
-  export const number: () => any;
-  export const boolean: () => any;
-  export const object: (shape: any) => any;
-  export const array: (schema: any) => any;
+  export interface ZodType<T> {
+    parse(data: unknown): T;
+    safeParse(data: unknown): { success: true; data: T } | { success: false; error: unknown };
+  }
+
+  export function z(): ZodType<unknown>;
+
+  export const string: () => ZodType<string>;
+  export const number: () => ZodType<number>;
+  export const boolean: () => ZodType<boolean>;
+  export const object: <T extends Record<string, ZodType<unknown>>>(
+    shape: T,
+  ) => ZodType<{ [K in keyof T]: T[K] extends ZodType<infer U> ? U : never }>;
+  export const array: <T>(schema: ZodType<T>) => ZodType<T[]>;
 }

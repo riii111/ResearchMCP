@@ -1,6 +1,6 @@
-import { Result, ok, err } from "neverthrow";
-import { QueryParams, SearchResponse, SearchError, SearchResult } from "../models/search.ts";
-import { SearchAdapter, CacheAdapter, createSearchCacheKey } from "./searchAdapter.ts";
+import { err, ok, Result } from "neverthrow";
+import { QueryParams, SearchError, SearchResponse, SearchResult } from "../models/search.ts";
+import { CacheAdapter, createSearchCacheKey, SearchAdapter } from "./searchAdapter.ts";
 
 interface BraveSearchParams {
   q: string;
@@ -36,14 +36,14 @@ const INITIAL_BACKOFF_MS = 1000;
 export class BraveSearchAdapter implements SearchAdapter {
   constructor(
     private readonly apiKey: string,
-    private readonly cache?: CacheAdapter
+    private readonly cache?: CacheAdapter,
   ) {}
 
   async search(query: QueryParams): Promise<Result<SearchResponse, SearchError>> {
     if (this.cache) {
       const cacheKey = createSearchCacheKey(query);
       const cachedResult = await this.cache.get<SearchResponse>(cacheKey);
-      
+
       if (cachedResult) {
         return ok(cachedResult);
       }
@@ -69,7 +69,7 @@ export class BraveSearchAdapter implements SearchAdapter {
             "Accept": "application/json",
             "X-Subscription-Token": this.apiKey,
           },
-        }
+        },
       );
 
       if (!response.ok) {
@@ -113,7 +113,7 @@ export class BraveSearchAdapter implements SearchAdapter {
 
   private async executeWithBackoff<T, E>(
     fn: () => Promise<Result<T, E>>,
-    attempt = 1
+    attempt = 1,
   ): Promise<Result<T, E>> {
     const result = await fn();
 
@@ -125,13 +125,15 @@ export class BraveSearchAdapter implements SearchAdapter {
     const error = result.error;
     if (typeof error === "object" && error !== null && "type" in error) {
       const typedError = error as { type: string; retryAfterMs?: number };
-      
+
       if (typedError.type === "rateLimit") {
         // Use either the server-specified retry time or calculate backoff
         const retryAfter = typedError.retryAfterMs || this.calculateBackoff(attempt);
-        console.log(`Rate limited. Retrying in ${retryAfter}ms (attempt ${attempt}/${MAX_RETRY_ATTEMPTS})`);
-        
-        await new Promise(resolve => setTimeout(resolve, retryAfter));
+        console.log(
+          `Rate limited. Retrying in ${retryAfter}ms (attempt ${attempt}/${MAX_RETRY_ATTEMPTS})`,
+        );
+
+        await new Promise((resolve) => setTimeout(resolve, retryAfter));
         return this.executeWithBackoff(fn, attempt + 1);
       }
     }
@@ -148,10 +150,10 @@ export class BraveSearchAdapter implements SearchAdapter {
 
   private mapBraveResponseToSearchResponse(
     braveResponse: BraveSearchResponse,
-    query: QueryParams
+    query: QueryParams,
   ): SearchResponse {
     const results: SearchResult[] = braveResponse.web.results.map((result, index) => ({
-      id: Buffer.from(result.url).toString("base64"),
+      id: btoa(result.url),
       title: result.title,
       url: result.url,
       snippet: result.description,
@@ -182,13 +184,20 @@ export class BraveSearchAdapter implements SearchAdapter {
     const MS_PER_YEAR = 365 * MS_PER_DAY;
 
     switch (unit.toLowerCase()) {
-      case "minute": return numValue * MS_PER_MINUTE;
-      case "hour": return numValue * MS_PER_HOUR;
-      case "day": return numValue * MS_PER_DAY;
-      case "week": return numValue * MS_PER_WEEK;
-      case "month": return numValue * MS_PER_MONTH;
-      case "year": return numValue * MS_PER_YEAR;
-      default: return 0;
+      case "minute":
+        return numValue * MS_PER_MINUTE;
+      case "hour":
+        return numValue * MS_PER_HOUR;
+      case "day":
+        return numValue * MS_PER_DAY;
+      case "week":
+        return numValue * MS_PER_WEEK;
+      case "month":
+        return numValue * MS_PER_MONTH;
+      case "year":
+        return numValue * MS_PER_YEAR;
+      default:
+        return 0;
     }
   }
 }

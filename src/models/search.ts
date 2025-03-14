@@ -21,7 +21,7 @@ export interface SearchResponse {
   readonly searchTime: number;
 }
 
-export type SearchError = 
+export type SearchError =
   | { type: "network"; message: string }
   | { type: "rateLimit"; retryAfterMs: number }
   | { type: "invalidQuery"; issues: string[] }

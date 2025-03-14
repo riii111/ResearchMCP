@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { z } from "npm:zod@3.22.4";
 import { SearchService } from "../services/searchService.ts";
-import { McpRequest, McpSuccessResponse, McpErrorResponse } from "../models/mcp.ts";
+import { McpErrorResponse, McpRequest, McpSuccessResponse } from "../models/mcp.ts";
 
 const mcpRequestSchema = z.object({
   query: z.string().min(1).max(200),
@@ -21,7 +21,7 @@ export function createMcpRouter(searchService: SearchService): Hono {
     try {
       const data = await c.req.json();
       const result = mcpRequestSchema.safeParse(data);
-      
+
       if (!result.success) {
         const errorResponse: McpErrorResponse = {
           status: "error",
@@ -31,7 +31,7 @@ export function createMcpRouter(searchService: SearchService): Hono {
         };
         return c.json(errorResponse, 400);
       }
-      
+
       const request = result.data as McpRequest;
       const searchResult = await searchService.searchMcp(request);
 
@@ -47,7 +47,7 @@ export function createMcpRouter(searchService: SearchService): Hono {
             error: error.type === "search" ? error.details : undefined,
           };
           return c.json(errorResponse, error.type === "validation" ? 400 : 500);
-        }
+        },
       );
     } catch (error) {
       const errorResponse: McpErrorResponse = {

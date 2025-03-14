@@ -49,7 +49,7 @@ export function createResearchRouter(researchService: ResearchService): Hono {
     try {
       const data = await c.req.json();
       const result = researchRequestSchema.safeParse(data);
-      
+
       if (!result.success) {
         const errorResponse: ResearchErrorResponse = {
           status: "error",
@@ -58,7 +58,7 @@ export function createResearchRouter(researchService: ResearchService): Hono {
         };
         return c.json(errorResponse, 400);
       }
-      
+
       const request = result.data as McpRequest;
       const researchResult = await researchService.research(request);
 
@@ -81,11 +81,11 @@ export function createResearchRouter(researchService: ResearchService): Hono {
               searchResults: [],
               summary: "",
               insights: [],
-              sources: []
-            }
+              sources: [],
+            },
           };
           return c.json(errorResponse, status);
-        }
+        },
       );
     } catch (error) {
       const errorResponse: ResearchErrorResponse = {
@@ -97,8 +97,8 @@ export function createResearchRouter(researchService: ResearchService): Hono {
           searchResults: [],
           summary: "",
           insights: [],
-          sources: []
-        }
+          sources: [],
+        },
       };
       return c.json(errorResponse, 400);
     }

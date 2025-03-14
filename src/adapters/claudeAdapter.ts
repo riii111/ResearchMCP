@@ -1,4 +1,4 @@
-import { Result, ok, err } from "neverthrow";
+import { err, ok, Result } from "neverthrow";
 
 export interface ClaudeMessage {
   role: "user" | "assistant";
@@ -29,7 +29,7 @@ export interface ClaudeResponse {
   };
 }
 
-export type ClaudeError = 
+export type ClaudeError =
   | { type: "network"; message: string }
   | { type: "authorization"; message: string }
   | { type: "rate_limit"; retryAfter: number }
@@ -47,11 +47,13 @@ const INITIAL_BACKOFF_MS = 1000;
 export class AnthropicClaudeAdapter implements ClaudeAdapter {
   constructor(private readonly apiKey: string) {}
 
-  async complete(request: ClaudeRequest): Promise<Result<ClaudeResponse, ClaudeError>> {
+  complete(request: ClaudeRequest): Promise<Result<ClaudeResponse, ClaudeError>> {
     return this.executeWithBackoff(() => this.executeRequest(request));
   }
 
-  private async executeRequest(request: ClaudeRequest): Promise<Result<ClaudeResponse, ClaudeError>> {
+  private async executeRequest(
+    request: ClaudeRequest,
+  ): Promise<Result<ClaudeResponse, ClaudeError>> {
     try {
       const response = await fetch(CLAUDE_API_URL, {
         method: "POST",
@@ -105,7 +107,7 @@ export class AnthropicClaudeAdapter implements ClaudeAdapter {
 
   private async executeWithBackoff<T, E>(
     fn: () => Promise<Result<T, E>>,
-    attempt = 1
+    attempt = 1,
   ): Promise<Result<T, E>> {
     const result = await fn();
 
@@ -117,13 +119,15 @@ export class AnthropicClaudeAdapter implements ClaudeAdapter {
     const error = result.error;
     if (typeof error === "object" && error !== null && "type" in error) {
       const typedError = error as { type: string; retryAfter?: number };
-      
+
       if (typedError.type === "rate_limit") {
         // Use either the server-specified retry time or calculate backoff
         const retryAfter = typedError.retryAfter || this.calculateBackoff(attempt);
-        console.log(`Rate limited. Retrying in ${retryAfter}ms (attempt ${attempt}/${MAX_RETRY_ATTEMPTS})`);
-        
-        await new Promise(resolve => setTimeout(resolve, retryAfter));
+        console.log(
+          `Rate limited. Retrying in ${retryAfter}ms (attempt ${attempt}/${MAX_RETRY_ATTEMPTS})`,
+        );
+
+        await new Promise((resolve) => setTimeout(resolve, retryAfter));
         return this.executeWithBackoff(fn, attempt + 1);
       }
     }

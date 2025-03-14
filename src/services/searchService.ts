@@ -1,7 +1,7 @@
-import { Result, ok, err } from "neverthrow";
+import { err, ok, Result } from "neverthrow";
 import { SearchAdapter } from "../adapters/searchAdapter.ts";
-import { QueryParams, SearchResponse, SearchError, SearchResult } from "../models/search.ts";
-import { McpRequest, McpResponse, McpError, McpResult } from "../models/mcp.ts";
+import { QueryParams, SearchError, SearchResponse, SearchResult } from "../models/search.ts";
+import { McpError, McpRequest, McpResponse, McpResult } from "../models/mcp.ts";
 
 export class SearchService {
   constructor(private readonly searchAdapter: SearchAdapter) {}
@@ -65,15 +65,18 @@ export class SearchService {
           type: "search",
           details: message,
         });
-      }
+      },
     );
   }
 
-  filterByRelevance(results: ReadonlyArray<SearchResult>, minRank?: number): ReadonlyArray<SearchResult> {
+  filterByRelevance(
+    results: ReadonlyArray<SearchResult>,
+    minRank?: number,
+  ): ReadonlyArray<SearchResult> {
     if (minRank === undefined) {
       return results;
     }
-    
+
     return results.filter((result) => (result.rank || 0) >= minRank);
   }
 }

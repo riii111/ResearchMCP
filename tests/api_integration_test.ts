@@ -1,28 +1,28 @@
 import { assertEquals, assertExists } from "https://deno.land/std@0.211.0/assert/mod.ts";
-import { Result, ok } from "neverthrow";
+import { ok, Result } from "neverthrow";
 import { Hono } from "hono";
 import { SearchAdapter } from "../src/adapters/searchAdapter.ts";
-import { ClaudeAdapter, ClaudeResponse, ClaudeRequest } from "../src/adapters/claudeAdapter.ts";
+import { ClaudeAdapter, ClaudeRequest, ClaudeResponse } from "../src/adapters/claudeAdapter.ts";
 import { SearchService } from "../src/services/searchService.ts";
 import { ResearchService } from "../src/services/researchService.ts";
 import { createMcpRouter } from "../src/routes/mcp.ts";
 import { createResearchRouter } from "../src/routes/research.ts";
-import { QueryParams, SearchResponse, SearchError } from "../src/models/search.ts";
+import { QueryParams, SearchError, SearchResponse } from "../src/models/search.ts";
 import { McpResponse } from "../src/models/mcp.ts";
 
 class MockSearchAdapter implements SearchAdapter {
   constructor(private readonly mockResults: Result<SearchResponse, SearchError>) {}
 
-  async search(_query: QueryParams): Promise<Result<SearchResponse, SearchError>> {
-    return this.mockResults;
+  search(_query: QueryParams): Promise<Result<SearchResponse, SearchError>> {
+    return Promise.resolve(this.mockResults);
   }
 }
 
 class MockClaudeAdapter implements ClaudeAdapter {
-  constructor(private readonly mockResponse: Result<ClaudeResponse, any>) {}
+  constructor(private readonly mockResponse: Result<ClaudeResponse, ClaudeError>) {}
 
-  async complete(_request: ClaudeRequest): Promise<Result<ClaudeResponse, any>> {
-    return this.mockResponse;
+  complete(_request: ClaudeRequest): Promise<Result<ClaudeResponse, ClaudeError>> {
+    return Promise.resolve(this.mockResponse);
   }
 }
 
@@ -34,20 +34,20 @@ type AnyResponseType = SuccessResponseType | ErrorResponseType;
 // Helper function to create a test app with mock adapters
 function createTestApp(
   mockSearchResults: Result<SearchResponse, SearchError>,
-  mockClaudeResponse?: Result<ClaudeResponse, any>
+  mockClaudeResponse?: Result<ClaudeResponse, ClaudeError>,
 ): Hono {
   const app = new Hono();
   const searchAdapter = new MockSearchAdapter(mockSearchResults);
   const searchService = new SearchService(searchAdapter);
-  
+
   app.route("/mcp", createMcpRouter(searchService));
-  
+
   if (mockClaudeResponse) {
     const claudeAdapter = new MockClaudeAdapter(mockClaudeResponse);
     const researchService = new ResearchService(searchService, claudeAdapter);
     app.route("/research", createResearchRouter(researchService));
   }
-  
+
   return app;
 }
 
@@ -101,7 +101,7 @@ const mockClaudeResponse: ClaudeResponse = {
 
 Deno.test("MCP search endpoint returns correct response", async () => {
   const app = createTestApp(ok(mockSearchResponse));
-  
+
   const req = new Request("http://localhost/mcp/search", {
     method: "POST",
     headers: {
@@ -114,10 +114,10 @@ Deno.test("MCP search endpoint returns correct response", async () => {
       },
     }),
   });
-  
+
   const res = await app.request(req);
   assertEquals(res.status, 200);
-  
+
   const data = await res.json() as McpResponse;
   assertEquals(data.status, "success");
   assertEquals(data.results.length, 2);
@@ -127,7 +127,7 @@ Deno.test("MCP search endpoint returns correct response", async () => {
 
 Deno.test("Research endpoint returns enriched results", async () => {
   const app = createTestApp(ok(mockSearchResponse), ok(mockClaudeResponse));
-  
+
   const req = new Request("http://localhost/research", {
     method: "POST",
     headers: {
@@ -140,13 +140,13 @@ Deno.test("Research endpoint returns enriched results", async () => {
       },
     }),
   });
-  
+
   const res = await app.request(req);
   assertEquals(res.status, 200);
-  
+
   const data = await res.json() as AnyResponseType;
   assertEquals(data.status, "success");
-  
+
   if (data.status === "success" && "result" in data) {
     assertExists(data.result);
     const result = data.result as Record<string, unknown>;

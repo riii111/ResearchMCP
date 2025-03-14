@@ -1,14 +1,14 @@
 import { assertEquals, assertExists } from "https://deno.land/std@0.211.0/assert/mod.ts";
-import { Result, ok } from "neverthrow";
+import { ok, Result } from "neverthrow";
 import { SearchAdapter } from "../src/adapters/searchAdapter.ts";
 import { SearchService } from "../src/services/searchService.ts";
-import { QueryParams, SearchResponse, SearchError } from "../src/models/search.ts";
+import { QueryParams, SearchError, SearchResponse } from "../src/models/search.ts";
 
 class MockSearchAdapter implements SearchAdapter {
   constructor(private readonly mockResults: Result<SearchResponse, SearchError>) {}
 
-  async search(_query: QueryParams): Promise<Result<SearchResponse, SearchError>> {
-    return this.mockResults;
+  search(_query: QueryParams): Promise<Result<SearchResponse, SearchError>> {
+    return Promise.resolve(this.mockResults);
   }
 }
 

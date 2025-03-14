@@ -1,7 +1,7 @@
-import { Result, ok, err } from "neverthrow";
+import { err, ok, Result } from "neverthrow";
 import { SearchService } from "./searchService.ts";
 import { ClaudeAdapter, ClaudeMessage } from "../adapters/claudeAdapter.ts";
-import { McpRequest, McpResult, McpResponse, McpError } from "../models/mcp.ts";
+import { McpError, McpRequest, McpResult } from "../models/mcp.ts";
 
 export interface ResearchResult {
   query: string;
@@ -19,7 +19,7 @@ export type ResearchError =
 export class ResearchService {
   constructor(
     private readonly searchService: SearchService,
-    private readonly claudeAdapter: ClaudeAdapter
+    private readonly claudeAdapter: ClaudeAdapter,
   ) {}
 
   async research(request: McpRequest): Promise<Result<ResearchResult, ResearchError>> {
@@ -32,7 +32,7 @@ export class ResearchService {
 
     // Step 1: Perform the search
     const searchResult = await this.searchService.searchMcp(request);
-    
+
     if (searchResult.isErr()) {
       return err({
         type: "search_failed",
@@ -52,8 +52,11 @@ export class ResearchService {
     }
 
     // Step 2: Ask Claude to analyze the search results
-    const analysisResult = await this.analyzeWithClaude(request.query, Array.from(searchData.results));
-    
+    const analysisResult = await this.analyzeWithClaude(
+      request.query,
+      Array.from(searchData.results),
+    );
+
     if (analysisResult.isErr()) {
       return err({
         type: "analysis_failed",
@@ -73,12 +76,14 @@ export class ResearchService {
 
   private async analyzeWithClaude(
     query: string,
-    results: McpResult[]
-  ): Promise<Result<{
-    summary: string;
-    insights: string[];
-    sources: string[];
-  }, McpError>> {
+    results: McpResult[],
+  ): Promise<
+    Result<{
+      summary: string;
+      insights: string[];
+      sources: string[];
+    }, McpError>
+  > {
     const promptMessages: ClaudeMessage[] = [
       {
         role: "user",
@@ -91,7 +96,8 @@ export class ResearchService {
       messages: promptMessages,
       temperature: 0.3,
       max_tokens: 1500,
-      system: "You are a helpful research assistant that summarizes search results and extracts insights.",
+      system:
+        "You are a helpful research assistant that summarizes search results and extracts insights.",
     };
 
     const response = await this.claudeAdapter.complete(claudeRequest);
@@ -115,7 +121,9 @@ export class ResearchService {
     } catch (error) {
       return err({
         type: "server",
-        message: `Failed to parse Claude response: ${error instanceof Error ? error.message : "Unknown error"}`,
+        message: `Failed to parse Claude response: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
       });
     }
   }
