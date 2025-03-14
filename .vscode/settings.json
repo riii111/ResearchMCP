@@ -1,22 +1,30 @@
 {
   "deno.enable": true,
-  "deno.lint": true,
-  "deno.unstable": false,
-  "deno.suggest.imports.hosts": {
-    "https://deno.land": true,
-    "https://cdn.skypack.dev": true,
-    "https://esm.sh": true
-  },
+  "deno.unstable": true,
   "deno.importMap": "./deno.json",
+  "deno.internalDebug": true,
   "editor.formatOnSave": true,
   "editor.defaultFormatter": "denoland.vscode-deno",
-  "deno.inlayHints.enumMemberValues.enabled": true,
-  "deno.inlayHints.functionLikeReturnTypes.enabled": true,
-  "deno.inlayHints.parameterNames.enabled": "all",
-  "deno.inlayHints.parameterTypes.enabled": true,
-  "deno.inlayHints.propertyDeclarationTypes.enabled": true,
-  "deno.inlayHints.variableTypes.enabled": true,
+  "deno.suggest.imports.hosts": {
+    "https://deno.land": true,
+    "https://esm.sh": true,
+    "npm:": true
+  },
+  "deno.lint": true,
   "deno.config": "./deno.json",
+  "deno.codeLens.test": true,
+  "deno.disablePaths": [],
+  "deno.enablePaths": [],
+  "deno.documentPreloadLimit": 5000,
+  "deno.cacheOnSave": true,
+  // "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.suggest.completeFunctionCalls": true,
+  "javascript.suggest.completeFunctionCalls": true,
+  "makefile.configureOnOpen": false,
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "typescript.preferences.importModuleSpecifier": "non-relative",
+  "typescript.suggest.paths": true,
+  "typescript.tsserver.experimental.enableProjectDiagnostics": true,
   "[typescript]": {
     "editor.defaultFormatter": "denoland.vscode-deno"
   },

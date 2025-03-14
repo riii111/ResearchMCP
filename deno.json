@@ -6,7 +6,8 @@
     "lint": "deno lint",
     "fmt": "deno fmt",
     "check": "deno check **/*.ts",
-    "ci": "deno fmt --check && deno lint && deno check **/*.ts"
+    "ci": "deno fmt --check && deno lint && deno check **/*.ts",
+    "cache": "deno cache --reload main.ts"
   },
   "fmt": {
     "indentWidth": 2,
@@ -18,23 +19,21 @@
   "lint": {
     "rules": {
       "tags": ["recommended"],
-      "include": [
-        "ban-untagged-todo",
-        "no-explicit-any",
-        "no-throw-literal"
-      ]
+      "include": ["ban-untagged-todo", "no-explicit-any", "no-throw-literal"]
     }
   },
   "imports": {
     "hono": "npm:hono@4.1.2",
-    "hono/": "npm:/hono@4.1.2/",
+    "hono/logger": "npm:hono@4.1.2/logger",
+    "hono/secure-headers": "npm:hono@4.1.2/secure-headers",
     "neverthrow": "npm:neverthrow@6.1.0",
     "zod": "npm:zod@3.22.4",
     "std/": "https://deno.land/std@0.211.0/"
   },
   "compilerOptions": {
-    "allowJs": true,
-    "lib": ["deno.window", "dom"],
-    "strict": true
-  }
+    "lib": ["DOM", "ESNext", "deno.ns"],
+    "strict": true,
+    "types": ["deno.ns"]
+  },
+  "unstable": ["npm:*"]
 }

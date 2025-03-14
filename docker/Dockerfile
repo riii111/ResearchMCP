@@ -1,11 +1,15 @@
-FROM denoland/deno:debian
+FROM denoland/deno:alpine
 
 WORKDIR /app
 
-COPY deno.json deno.lock* ./
-RUN deno cache main.ts
+RUN apk --no-cache add ca-certificates
+
+COPY deno.json ./
+
+RUN deno cache main.ts || true
 
 COPY . .
+
 RUN deno cache main.ts
 
 EXPOSE 8000

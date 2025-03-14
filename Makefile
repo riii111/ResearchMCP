@@ -1,4 +1,4 @@
-.PHONY: start dev test lint format check build d-build d-up d-down clean help
+.PHONY: start dev test lint format check d-build d-up d-down clean help
 
 # Default target
 .DEFAULT_GOAL := help
@@ -17,9 +17,13 @@ help:
 	@echo "make lint        - Run linter"
 	@echo "make format      - Format code"
 	@echo "make check       - Type check"
-	@echo "make docker-build - Build Docker image"
-	@echo "make docker-up   - Start Docker containers"
-	@echo "make docker-down - Stop Docker containers"
+	@echo "make d-build     - Build Docker image"
+	@echo "make d-up        - Start Docker containers"
+	@echo "make d-down      - Stop Docker containers"
+	@echo "make d-logs      - View Docker logs"
+	@echo "make d-test      - Run tests in Docker"
+	@echo "make init        - Initialize development environment"
+	@echo "make dev-setup   - Reset and setup Docker environment for development"
 	@echo "make clean       - Clean temporary files"
 	@echo "make help        - Show this help message"
 
@@ -71,7 +75,7 @@ d-test:
 # All-in-one commands
 all-tests: lint check test
 
-rebuild: docker-down docker-build docker-up
+rebuild: d-down d-build d-up
 	@echo "Rebuild complete, containers are running."
 
 # Check if Deno is installed
@@ -81,5 +85,30 @@ check-deno:
 # Initialize environment
 init: check-deno
 	@echo "Checking dependencies..."
-	deno cache main.ts
+	deno cache --reload main.ts
+	deno task cache
 	@echo "Environment initialized."
+
+# Reset environment for development
+dev-setup: d-down d-build d-up
+	@echo "Setting up development environment..."
+	docker compose -f $(COMPOSE_FILE) exec app deno cache --reload main.ts
+	@echo "Development environment ready!"
+
+# Initialize local development environment
+local-init: check-deno
+	@echo "Setting up local development environment..."
+	deno cache --reload main.ts
+	@echo "Downloading dependencies..."
+	deno task cache
+	@echo "Local development environment ready!"
+
+# Run local development server
+local-dev: check-deno
+	@echo "Starting local development server..."
+	deno task dev
+
+# Run tests locally
+local-test: check-deno
+	@echo "Running tests locally..."
+	deno task test

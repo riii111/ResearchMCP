@@ -12,15 +12,36 @@ A research tool that combines Model Context Protocol (MCP) and Brave Search to a
 
 ## Setup
 
+### Local Development
+
 1. Install [Deno](https://deno.land/)
 2. Clone the repository
 3. Set environment variables
    - `BRAVE_API_KEY`: Brave Search API key
    - `CLAUDE_API_KEY`: Claude API key (optional)
-4. Run the application
+4. Initialize the local development environment:
 
    ```
-   deno task start
+   make local-init
+   ```
+
+5. Run the application locally:
+
+   ```
+   make local-dev
+   ```
+
+### Container Environment
+
+1. Install Docker and Docker Compose
+2. Set environment variables
+   - `BRAVE_API_KEY`: Brave Search API key
+   - `CLAUDE_API_KEY`: Claude API key (optional)
+3. Build and run the container:
+
+   ```
+   make d-build
+   make d-up
    ```
 
 ## Project Structure
