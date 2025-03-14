@@ -3,7 +3,7 @@
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "lib": ["DOM", "ESNext", "deno.ns"],
+    "lib": ["DOM", "ESNext"],
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -12,7 +12,6 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "types": ["deno.ns"],
     "jsx": "react-jsx",
     "paths": {
       "hono": ["./node_modules/hono"],

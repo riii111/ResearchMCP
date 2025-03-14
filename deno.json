@@ -31,9 +31,8 @@
     "std/": "https://deno.land/std@0.211.0/"
   },
   "compilerOptions": {
-    "lib": ["DOM", "ESNext", "deno.ns"],
-    "strict": true,
-    "types": ["deno.ns"]
+    "lib": ["DOM", "ESNext"],
+    "strict": true
   },
   "nodeModulesDir": "auto"
 }

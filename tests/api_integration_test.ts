@@ -1,3 +1,4 @@
+/// <reference lib="deno.ns" />
 import { assertEquals, assertExists } from "https://deno.land/std@0.211.0/assert/mod.ts";
 import { ok, Result } from "neverthrow";
 import { Hono } from "hono";

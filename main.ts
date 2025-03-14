@@ -1,3 +1,4 @@
+/// <reference lib="deno.ns" />
 import { Hono } from "hono";
 import { logger } from "hono/logger";
 import { secureHeaders } from "hono/secure-headers";
