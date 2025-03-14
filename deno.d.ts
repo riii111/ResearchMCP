@@ -1,29 +1,13 @@
 // Type definitions for Deno API
-declare namespace Deno {
+// NOTE: These declarations augment the built-in Deno namespace
+// Custom types for this project only
+declare namespace DenoCustom {
   export interface Env {
     get(key: string): string | undefined;
     set(key: string, value: string): void;
     delete(key: string): void;
     toObject(): { [key: string]: string };
   }
-
-  export const env: Env;
-
-  export function exit(code?: number): never;
-
-  export interface ServeOptions {
-    port?: number;
-    hostname?: string;
-    handler?: (request: Request) => Response | Promise<Response>;
-    onListen?: (params: { hostname: string; port: number }) => void;
-    signal?: AbortSignal;
-  }
-
-  export function serve(options: ServeOptions): void;
-  export function serve(
-    handler: (request: Request) => Response | Promise<Response>,
-    options?: Omit<ServeOptions, "handler">,
-  ): void;
 }
 
 // Hono declarations

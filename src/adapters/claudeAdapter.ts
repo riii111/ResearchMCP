@@ -1,5 +1,5 @@
 import { err, ok, Result } from "neverthrow";
-import { getErrorSafe, getValueSafe } from "../utils/resultUtils.ts";
+import { getErrorSafe } from "../utils/resultUtils.ts";
 
 export interface ClaudeMessage {
   role: "user" | "assistant";

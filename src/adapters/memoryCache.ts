@@ -1,4 +1,4 @@
-import { ok, err, Result } from "neverthrow";
+import { err, ok, Result } from "neverthrow";
 import { CacheAdapter, CacheError } from "./searchAdapter.ts";
 
 interface CacheEntry<T> {

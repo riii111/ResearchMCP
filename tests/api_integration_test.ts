@@ -120,7 +120,7 @@ Deno.test("MCP search endpoint returns correct response", async () => {
     }),
   });
 
-  const res = await app.request(req);
+  const res = await app.fetch(req);
   assertEquals(res.status, 200);
 
   const data = await res.json() as McpResponse;
@@ -146,7 +146,7 @@ Deno.test("Research endpoint returns enriched results", async () => {
     }),
   });
 
-  const res = await app.request(req);
+  const res = await app.fetch(req);
   assertEquals(res.status, 200);
 
   const data = await res.json() as AnyResponseType;

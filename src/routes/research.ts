@@ -75,11 +75,14 @@ export function createResearchRouter(researchService: ResearchService): Hono {
         if (!error) {
           return c.json({ status: "error", message: "Unknown error" }, 500);
         }
-        const status = error.type === "validation" ? 400 : 500;
+
+        // Type assertion to ensure error is properly typed
+        const typedError = error as { type: string; message: string };
+        const status = typedError.type === "validation" ? 400 : 500;
         const errorResponse: ResearchErrorResponse = {
           status: "error",
-          message: error.message,
-          type: error.type,
+          message: typedError.message,
+          type: typedError.type,
           result: {
             query: request.query,
             searchResults: [],

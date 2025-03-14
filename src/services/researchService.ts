@@ -84,14 +84,17 @@ export class ResearchService {
         message: "Failed to get analysis result",
       });
     }
-    
+
+    // Type assertion to ensure analysis is properly typed
+    const typedAnalysis = analysis as ClaudeResponseType;
+
     // Return the research result
     return ok({
       query: request.query,
       searchResults: successData.results,
-      summary: analysis.summary,
-      insights: analysis.insights,
-      sources: analysis.sources,
+      summary: typedAnalysis.summary,
+      insights: typedAnalysis.insights,
+      sources: typedAnalysis.sources,
     });
   }
 
@@ -133,7 +136,9 @@ export class ResearchService {
           message: "Failed to get Claude response",
         });
       }
-      const content = claudeResponse.content[0].text;
+      // Type assertion to ensure claudeResponse is properly typed
+      const typedClaudeResponse = claudeResponse as { content: Array<{ text: string }> };
+      const content = typedClaudeResponse.content[0].text;
       const analysisData = JSON.parse(content) as ClaudeResponseType;
 
       return ok(analysisData);
