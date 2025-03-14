@@ -40,7 +40,8 @@ export class ResearchService {
       });
     }
 
-    const searchData = searchResult._unsafeUnwrap();
+    // Use destructuring instead of _unsafeUnwrap()
+    const { value: searchData } = searchResult;
     if (searchData.results.length === 0) {
       return ok({
         query: request.query,
@@ -57,21 +58,24 @@ export class ResearchService {
       Array.from(searchData.results),
     );
 
-    if (analysisResult.isErr()) {
-      return err({
-        type: "analysis_failed",
-        message: `Failed to analyze search results: ${JSON.stringify(analysisResult.error)}`,
-      });
-    }
-
-    // Format the response
-    return ok({
-      query: request.query,
-      searchResults: searchData.results,
-      summary: analysisResult._unsafeUnwrap().summary,
-      insights: analysisResult._unsafeUnwrap().insights,
-      sources: analysisResult._unsafeUnwrap().sources,
-    });
+    return analysisResult.match<Result<ResearchResult, ResearchError>>(
+      (analysis) => {
+        // Format the response using match pattern
+        return ok({
+          query: request.query,
+          searchResults: searchData.results,
+          summary: analysis.summary,
+          insights: analysis.insights,
+          sources: analysis.sources,
+        });
+      },
+      (error) => {
+        return err({
+          type: "analysis_failed",
+          message: `Failed to analyze search results: ${JSON.stringify(error)}`,
+        });
+      },
+    );
   }
 
   private async analyzeWithClaude(
@@ -102,30 +106,39 @@ export class ResearchService {
 
     const response = await this.claudeAdapter.complete(claudeRequest);
 
-    if (response.isErr()) {
-      return err({
-        type: "server",
-        message: `Claude API error: ${JSON.stringify(response.error)}`,
-      });
-    }
-
-    try {
-      const content = response._unsafeUnwrap().content[0].text;
-      const analysisData = JSON.parse(content) as {
+    return response.match<
+      Result<{
         summary: string;
         insights: string[];
         sources: string[];
-      };
+      }, McpError>
+    >(
+      (claudeResponse) => {
+        try {
+          const content = claudeResponse.content[0].text;
+          const analysisData = JSON.parse(content) as {
+            summary: string;
+            insights: string[];
+            sources: string[];
+          };
 
-      return ok(analysisData);
-    } catch (error) {
-      return err({
-        type: "server",
-        message: `Failed to parse Claude response: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
-      });
-    }
+          return ok(analysisData);
+        } catch (error) {
+          return err({
+            type: "server",
+            message: `Failed to parse Claude response: ${
+              error instanceof Error ? error.message : "Unknown error"
+            }`,
+          });
+        }
+      },
+      (error) => {
+        return err({
+          type: "server",
+          message: `Claude API error: ${JSON.stringify(error)}`,
+        });
+      },
+    );
   }
 
   private buildAnalysisPrompt(query: string, results: ReadonlyArray<McpResult>): string {

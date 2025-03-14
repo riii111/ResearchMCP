@@ -1,4 +1,5 @@
-import { CacheAdapter } from "./searchAdapter.ts";
+import { ok, Result } from "neverthrow";
+import { CacheAdapter, CacheError } from "./searchAdapter.ts";
 
 interface CacheEntry<T> {
   value: T;
@@ -8,27 +9,41 @@ interface CacheEntry<T> {
 export class MemoryCacheAdapter implements CacheAdapter {
   private storage = new Map<string, CacheEntry<unknown>>();
 
-  get<T>(key: string): Promise<T | undefined> {
-    const entry = this.storage.get(key) as CacheEntry<T> | undefined;
+  get<T>(key: string): Promise<Result<T | undefined, CacheError>> {
+    try {
+      const entry = this.storage.get(key) as CacheEntry<T> | undefined;
 
-    if (!entry) {
-      return Promise.resolve(undefined);
+      if (!entry) {
+        return Promise.resolve(ok(undefined));
+      }
+
+      if (entry.expireAt < Date.now()) {
+        this.storage.delete(key);
+        return Promise.resolve(ok(undefined));
+      }
+
+      return Promise.resolve(ok(entry.value));
+    } catch (error) {
+      return Promise.resolve(Result.err({
+        type: "storage",
+        message: error instanceof Error ? error.message : "Unknown error accessing storage",
+      }));
     }
-
-    if (entry.expireAt < Date.now()) {
-      this.storage.delete(key);
-      return Promise.resolve(undefined);
-    }
-
-    return Promise.resolve(entry.value);
   }
 
-  set<T>(key: string, value: T, ttlMs = 60 * 60 * 1000): Promise<void> {
-    this.storage.set(key, {
-      value,
-      expireAt: Date.now() + ttlMs,
-    });
-    return Promise.resolve();
+  set<T>(key: string, value: T, ttlMs = 60 * 60 * 1000): Promise<Result<void, CacheError>> {
+    try {
+      this.storage.set(key, {
+        value,
+        expireAt: Date.now() + ttlMs,
+      });
+      return Promise.resolve(ok(undefined));
+    } catch (error) {
+      return Promise.resolve(Result.err({
+        type: "storage",
+        message: error instanceof Error ? error.message : "Unknown error writing to storage",
+      }));
+    }
   }
 
   clear(): void {

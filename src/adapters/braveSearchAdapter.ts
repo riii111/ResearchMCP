@@ -42,10 +42,13 @@ export class BraveSearchAdapter implements SearchAdapter {
   async search(query: QueryParams): Promise<Result<SearchResponse, SearchError>> {
     if (this.cache) {
       const cacheKey = createSearchCacheKey(query);
-      const cachedResult = await this.cache.get<SearchResponse>(cacheKey);
+      const cacheResult = await this.cache.get<SearchResponse>(cacheKey);
 
-      if (cachedResult) {
-        return ok(cachedResult);
+      if (cacheResult.isOk()) {
+        const cachedValue = cacheResult.value;
+        if (cachedValue) {
+          return ok(cachedValue);
+        }
       }
     }
 
@@ -100,6 +103,7 @@ export class BraveSearchAdapter implements SearchAdapter {
       if (this.cache) {
         const cacheKey = createSearchCacheKey(query);
         await this.cache.set(cacheKey, searchResponse, DEFAULT_CACHE_TTL_MS);
+        // We ignore cache write errors as they're non-critical
       }
 
       return ok(searchResponse);

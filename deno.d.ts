@@ -72,12 +72,35 @@ declare module "neverthrow" {
   export class Result<T, E> {
     static ok<T, E>(value: T): Result<T, E>;
     static err<T, E>(error: E): Result<T, E>;
-    isOk(): boolean;
-    isErr(): boolean;
+
+    readonly value: T;
+    readonly error: E;
+
+    isOk(): this is Ok<T, E>;
+    isErr(): this is Err<T, E>;
+
     map<U>(fn: (value: T) => U): Result<U, E>;
     mapErr<U>(fn: (error: E) => U): Result<T, U>;
     andThen<U>(fn: (value: T) => Result<U, E>): Result<U, E>;
     unwrapOr(defaultValue: T): T;
+
+    match<R>(okFn: (value: T) => R, errFn: (error: E) => R): R;
+    _unsafeUnwrap(): T;
+    _unsafeUnwrapErr(): E;
+  }
+
+  export class Ok<T, E> extends Result<T, E> {
+    constructor(value: T);
+    readonly value: T;
+    isOk(): this is Ok<T, E>;
+    isErr(): this is Err<T, E>;
+  }
+
+  export class Err<T, E> extends Result<T, E> {
+    constructor(error: E);
+    readonly error: E;
+    isOk(): this is Ok<T, E>;
+    isErr(): this is Err<T, E>;
   }
 }
 
