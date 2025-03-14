@@ -30,6 +30,8 @@ interface BraveSearchResponse {
 
 const BRAVE_API_ENDPOINT = "https://api.search.brave.com/res/v1/web/search";
 const DEFAULT_CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
+const MAX_RETRY_ATTEMPTS = 3;
+const INITIAL_BACKOFF_MS = 1000;
 
 export class BraveSearchAdapter implements SearchAdapter {
   constructor(
@@ -47,6 +49,10 @@ export class BraveSearchAdapter implements SearchAdapter {
       }
     }
 
+    return this.executeWithBackoff(() => this.executeSearch(query));
+  }
+
+  private async executeSearch(query: QueryParams): Promise<Result<SearchResponse, SearchError>> {
     const params: BraveSearchParams = {
       q: query.q,
       count: query.maxResults,
@@ -103,6 +109,41 @@ export class BraveSearchAdapter implements SearchAdapter {
         message: error instanceof Error ? error.message : "Unknown error",
       });
     }
+  }
+
+  private async executeWithBackoff<T, E>(
+    fn: () => Promise<Result<T, E>>,
+    attempt = 1
+  ): Promise<Result<T, E>> {
+    const result = await fn();
+
+    if (result.isOk() || attempt >= MAX_RETRY_ATTEMPTS) {
+      return result;
+    }
+
+    // Check if the error is a rate limit error that we can retry
+    const error = result.error;
+    if (typeof error === "object" && error !== null && "type" in error) {
+      const typedError = error as { type: string; retryAfterMs?: number };
+      
+      if (typedError.type === "rateLimit") {
+        // Use either the server-specified retry time or calculate backoff
+        const retryAfter = typedError.retryAfterMs || this.calculateBackoff(attempt);
+        console.log(`Rate limited. Retrying in ${retryAfter}ms (attempt ${attempt}/${MAX_RETRY_ATTEMPTS})`);
+        
+        await new Promise(resolve => setTimeout(resolve, retryAfter));
+        return this.executeWithBackoff(fn, attempt + 1);
+      }
+    }
+
+    return result;
+  }
+
+  private calculateBackoff(attempt: number): number {
+    // Exponential backoff with jitter
+    const exponentialBackoff = INITIAL_BACKOFF_MS * Math.pow(2, attempt - 1);
+    const jitter = Math.random() * 0.3 * exponentialBackoff;
+    return exponentialBackoff + jitter;
   }
 
   private mapBraveResponseToSearchResponse(
