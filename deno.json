@@ -35,5 +35,5 @@
     "strict": true,
     "types": ["deno.ns"]
   },
-  "unstable": ["npm:*"]
+  "nodeModulesDir": "auto"
 }
