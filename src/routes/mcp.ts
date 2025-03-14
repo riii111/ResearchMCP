@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { z } from "npm:zod@3.22.4";
 import { SearchService } from "../services/searchService.ts";
-import { McpRequest } from "../models/mcp.ts";
+import { McpRequest, McpSuccessResponse, McpErrorResponse } from "../models/mcp.ts";
 
 const mcpRequestSchema = z.object({
   query: z.string().min(1).max(200),
@@ -23,11 +23,13 @@ export function createMcpRouter(searchService: SearchService): Hono {
       const result = mcpRequestSchema.safeParse(data);
       
       if (!result.success) {
-        return c.json({
+        const errorResponse: McpErrorResponse = {
           status: "error",
           message: "Validation error",
-          error: result.error.format(),
-        }, 400);
+          results: [],
+          error: JSON.stringify(result.error.format()),
+        };
+        return c.json(errorResponse, 400);
       }
       
       const request = result.data as McpRequest;
@@ -35,22 +37,26 @@ export function createMcpRouter(searchService: SearchService): Hono {
 
       return searchResult.match(
         (response) => {
-          return c.json(response);
+          return c.json(response as McpSuccessResponse);
         },
         (error) => {
-          return c.json({
+          const errorResponse: McpErrorResponse = {
             status: "error",
             message: error.type === "validation" ? error.message : "Search error",
+            results: [],
             error: error.type === "search" ? error.details : undefined,
-          }, error.type === "validation" ? 400 : 500);
+          };
+          return c.json(errorResponse, error.type === "validation" ? 400 : 500);
         }
       );
     } catch (error) {
-      return c.json({
+      const errorResponse: McpErrorResponse = {
         status: "error",
         message: "Request parsing error",
+        results: [],
         error: error instanceof Error ? error.message : "Unknown error",
-      }, 400);
+      };
+      return c.json(errorResponse, 400);
     }
   });
 

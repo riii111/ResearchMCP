@@ -11,10 +11,19 @@ export interface McpOptions {
   readonly freshness?: "day" | "week" | "month";
 }
 
-export interface McpResponse {
+export type McpResponse = McpSuccessResponse | McpErrorResponse;
+
+export interface McpSuccessResponse {
   readonly results: ReadonlyArray<McpResult>;
-  readonly status: "success" | "error";
+  readonly status: "success";
   readonly message?: string;
+}
+
+export interface McpErrorResponse {
+  readonly results: ReadonlyArray<McpResult>;
+  readonly status: "error";
+  readonly message: string;
+  readonly error?: string;
 }
 
 export interface McpResult {
