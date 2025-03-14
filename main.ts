@@ -1,4 +1,9 @@
 import { Hono } from "hono";
+import { logger } from "hono/logger";
+import { secureHeaders } from "hono/secure-headers";
+import { BraveSearchAdapter } from "./src/adapters/braveSearchAdapter.ts";
+import { MemoryCacheAdapter } from "./src/adapters/memoryCache.ts";
+import { SearchService } from "./src/services/searchService.ts";
 import { createMcpRouter } from "./src/routes/mcp.ts";
 
 const app = new Hono();
@@ -10,6 +15,12 @@ if (!braveApiKey) {
   Deno.exit(1);
 }
 
+app.use(logger());
+app.use(secureHeaders());
+
+const cacheAdapter = new MemoryCacheAdapter();
+const searchAdapter = new BraveSearchAdapter(braveApiKey, cacheAdapter);
+const searchService = new SearchService(searchAdapter);
 
 app.get("/", (c) => {
   return c.json({
@@ -18,6 +29,8 @@ app.get("/", (c) => {
     version: "0.1.0",
   });
 });
+
+app.route("/mcp", createMcpRouter(searchService));
 
 app.notFound((c) => {
   return c.json({ message: "Not Found" }, 404);
