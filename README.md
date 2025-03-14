@@ -98,7 +98,8 @@ make d-logs
 make d-down
 ```
 
-The Docker setup includes volume mounts for the project directory, so any code changes will be immediately reflected in the running container.
+The Docker setup includes volume mounts for the project directory, so any code changes will be
+immediately reflected in the running container.
 
 ## Hybrid Development Approach
 
