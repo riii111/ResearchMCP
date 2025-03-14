@@ -11,7 +11,7 @@ const port = parseInt(Deno.env.get("PORT") || "8000");
 const braveApiKey = Deno.env.get("BRAVE_API_KEY");
 
 if (!braveApiKey) {
-  console.error("環境変数BRAVE_API_KEYが設定されていません");
+  console.error("Environment variable BRAVE_API_KEY is not set");
   Deno.exit(1);
 }
 

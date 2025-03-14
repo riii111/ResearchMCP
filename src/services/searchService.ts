@@ -14,7 +14,7 @@ export class SearchService {
     if (!request.query) {
       return err({
         type: "validation",
-        message: "検索クエリが必要です",
+        message: "Search query is required",
       });
     }
 
@@ -46,19 +46,19 @@ export class SearchService {
 
         switch (error.type) {
           case "network":
-            message = `ネットワークエラー: ${error.message}`;
+            message = `Network error: ${error.message}`;
             break;
           case "rateLimit":
-            message = `レート制限: ${Math.floor(error.retryAfterMs / 1000)}秒後に再試行してください`;
+            message = `Rate limit: Retry after ${Math.floor(error.retryAfterMs / 1000)} seconds`;
             break;
           case "invalidQuery":
-            message = `無効なクエリ: ${error.issues.join(", ")}`;
+            message = `Invalid query: ${error.issues.join(", ")}`;
             break;
           case "authorization":
             message = error.message;
             break;
           default:
-            message = "不明なエラー";
+            message = "Unknown error";
         }
 
         return err({

@@ -25,7 +25,7 @@ export function createMcpRouter(searchService: SearchService): Hono {
       if (!result.success) {
         return c.json({
           status: "error",
-          message: "検証エラー",
+          message: "Validation error",
           error: result.error.format(),
         }, 400);
       }
@@ -40,7 +40,7 @@ export function createMcpRouter(searchService: SearchService): Hono {
         (error) => {
           return c.json({
             status: "error",
-            message: error.type === "validation" ? error.message : "検索エラー",
+            message: error.type === "validation" ? error.message : "Search error",
             error: error.type === "search" ? error.details : undefined,
           }, error.type === "validation" ? 400 : 500);
         }
@@ -48,8 +48,8 @@ export function createMcpRouter(searchService: SearchService): Hono {
     } catch (error) {
       return c.json({
         status: "error",
-        message: "リクエスト解析エラー",
-        error: error instanceof Error ? error.message : "不明なエラー",
+        message: "Request parsing error",
+        error: error instanceof Error ? error.message : "Unknown error",
       }, 400);
     }
   });
