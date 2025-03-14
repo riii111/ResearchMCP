@@ -15,6 +15,7 @@
   },
   "imports": {
     "hono": "npm:hono@4.1.2",
-    "neverthrow": "npm:neverthrow@6.1.0"
+    "neverthrow": "npm:neverthrow@6.1.0",
+    "zod": "npm:zod@3.22.4"
   }
 }
