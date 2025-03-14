@@ -1,4 +1,4 @@
-import { ok, Result } from "neverthrow";
+import { ok, err, Result } from "neverthrow";
 import { CacheAdapter, CacheError } from "./searchAdapter.ts";
 
 interface CacheEntry<T> {
@@ -24,7 +24,7 @@ export class MemoryCacheAdapter implements CacheAdapter {
 
       return Promise.resolve(ok(entry.value));
     } catch (error) {
-      return Promise.resolve(Result.err({
+      return Promise.resolve(err({
         type: "storage",
         message: error instanceof Error ? error.message : "Unknown error accessing storage",
       }));
@@ -39,7 +39,7 @@ export class MemoryCacheAdapter implements CacheAdapter {
       });
       return Promise.resolve(ok(undefined));
     } catch (error) {
-      return Promise.resolve(Result.err({
+      return Promise.resolve(err({
         type: "storage",
         message: error instanceof Error ? error.message : "Unknown error writing to storage",
       }));

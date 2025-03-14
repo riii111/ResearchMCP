@@ -1,4 +1,5 @@
 import { err, ok, Result } from "neverthrow";
+import { getErrorSafe, getValueSafe } from "../utils/resultUtils.ts";
 
 export interface ClaudeMessage {
   role: "user" | "assistant";
@@ -116,8 +117,8 @@ export class AnthropicClaudeAdapter implements ClaudeAdapter {
     }
 
     // Check if the error is a rate limit error that we can retry
-    const error = result.error;
-    if (typeof error === "object" && error !== null && "type" in error) {
+    const error = getErrorSafe(result);
+    if (error && typeof error === "object" && error !== null && "type" in error) {
       const typedError = error as { type: string; retryAfter?: number };
 
       if (typedError.type === "rate_limit") {

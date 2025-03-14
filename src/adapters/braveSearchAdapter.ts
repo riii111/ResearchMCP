@@ -1,6 +1,7 @@
 import { err, ok, Result } from "neverthrow";
 import { QueryParams, SearchError, SearchResponse, SearchResult } from "../models/search.ts";
 import { CacheAdapter, createSearchCacheKey, SearchAdapter } from "./searchAdapter.ts";
+import { getErrorSafe, getValueSafe } from "../utils/resultUtils.ts";
 
 interface BraveSearchParams {
   q: string;
@@ -45,7 +46,7 @@ export class BraveSearchAdapter implements SearchAdapter {
       const cacheResult = await this.cache.get<SearchResponse>(cacheKey);
 
       if (cacheResult.isOk()) {
-        const cachedValue = cacheResult.value;
+        const cachedValue = getValueSafe(cacheResult);
         if (cachedValue) {
           return ok(cachedValue);
         }
@@ -66,7 +67,7 @@ export class BraveSearchAdapter implements SearchAdapter {
 
     try {
       const response = await fetch(
-        `${BRAVE_API_ENDPOINT}?${new URLSearchParams(params as Record<string, string>)}`,
+        `${BRAVE_API_ENDPOINT}?${new URLSearchParams(params as unknown as Record<string, string>)}`,
         {
           headers: {
             "Accept": "application/json",
@@ -126,8 +127,8 @@ export class BraveSearchAdapter implements SearchAdapter {
     }
 
     // Check if the error is a rate limit error that we can retry
-    const error = result.error;
-    if (typeof error === "object" && error !== null && "type" in error) {
+    const error = getErrorSafe(result);
+    if (error && typeof error === "object" && error !== null && "type" in error) {
       const typedError = error as { type: string; retryAfterMs?: number };
 
       if (typedError.type === "rateLimit") {

@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { ResearchService } from "../services/researchService.ts";
 import { McpRequest } from "../models/mcp.ts";
+import { getErrorSafe, getValueSafe } from "../utils/resultUtils.ts";
 
 const researchRequestSchema = z.object({
   query: z.string().min(1).max(200),
@@ -63,13 +64,17 @@ export function createResearchRouter(researchService: ResearchService): Hono {
       const researchResult = await researchService.research(request);
 
       if (researchResult.isOk()) {
+        const resultValue = getValueSafe(researchResult);
         const successResponse: ResearchSuccessResponse = {
           status: "success",
-          result: researchResult.value,
+          result: resultValue!,
         };
         return c.json(successResponse);
       } else {
-        const error = researchResult.error;
+        const error = getErrorSafe(researchResult);
+        if (!error) {
+          return c.json({ status: "error", message: "Unknown error" }, 500);
+        }
         const status = error.type === "validation" ? 400 : 500;
         const errorResponse: ResearchErrorResponse = {
           status: "error",
