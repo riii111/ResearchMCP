@@ -2,14 +2,13 @@ import { err, ok, Result } from "neverthrow";
 import { SearchService } from "./searchService.ts";
 import { ClaudeAdapter, ClaudeMessage } from "../adapters/claudeAdapter.ts";
 import { McpError, McpRequest, McpResult } from "../models/mcp.ts";
+import { ClaudeResponseType } from "../models/claude.ts";
 import { getErrorSafe, getValueSafe } from "../utils/resultUtils.ts";
-
-// Type for Claude's response data
-type ClaudeResponseType = {
-  summary: string;
-  insights: string[];
-  sources: string[];
-};
+import {
+  isClaudeResponseType,
+  isSuccessResponseWithResults,
+  isValidClaudeResponse,
+} from "../utils/typeGuards.ts";
 
 export interface ResearchResult {
   query: string;
@@ -49,9 +48,13 @@ export class ResearchService {
       });
     }
 
-    // Use destructuring instead of _unsafeUnwrap() with type assertion for McpSuccessResponse
+    // Extract search data using destructuring
     const { value: searchData } = searchResult;
-    const successData = searchData as { results: ReadonlyArray<McpResult> };
+
+    const successData = isSuccessResponseWithResults(searchData)
+      ? searchData
+      : { results: [] as ReadonlyArray<McpResult> };
+
     if (successData.results.length === 0) {
       return ok({
         query: request.query,
@@ -85,7 +88,15 @@ export class ResearchService {
       });
     }
 
-    // Type assertion to ensure analysis is properly typed
+    // Ensure analysis is properly typed
+    if (!isClaudeResponseType(analysis)) {
+      return err({
+        type: "analysis_failed",
+        message: "Analysis result does not match expected format",
+      });
+    }
+
+    // Analysis is now properly typed as ClaudeResponseType
     const typedAnalysis = analysis as ClaudeResponseType;
 
     // Return the research result
@@ -136,12 +147,35 @@ export class ResearchService {
           message: "Failed to get Claude response",
         });
       }
-      // Type assertion to ensure claudeResponse is properly typed
-      const typedClaudeResponse = claudeResponse as { content: Array<{ text: string }> };
-      const content = typedClaudeResponse.content[0].text;
-      const analysisData = JSON.parse(content) as ClaudeResponseType;
 
-      return ok(analysisData);
+      if (!isValidClaudeResponse(claudeResponse)) {
+        return err({
+          type: "server",
+          message: "Invalid Claude response format",
+        });
+      }
+
+      const content = claudeResponse.content[0].text;
+
+      try {
+        const parsedData = JSON.parse(content);
+
+        if (!isClaudeResponseType(parsedData)) {
+          return err({
+            type: "server",
+            message: "Claude response does not match expected format",
+          });
+        }
+
+        return ok(parsedData);
+      } catch (parseError) {
+        return err({
+          type: "server",
+          message: `Failed to parse JSON from Claude response: ${
+            parseError instanceof Error ? parseError.message : "Invalid JSON"
+          }`,
+        });
+      }
     } catch (error) {
       return err({
         type: "server",
