@@ -48,9 +48,10 @@ functionality equivalent to ChatGPT's DeepResearch.
 ## Project Structure
 
 - `src/`: Source code
+  - `adapters/`: External service adapters 
+  - `models/`: Domain models and type definitions
   - `routes/`: API route definitions
   - `services/`: Business logic
-  - `types/`: Type definitions
   - `utils/`: Utility functions
 - `tests/`: Test files
 - `.rules/`: Project requirements and rules
@@ -131,31 +132,29 @@ The following simplified diagram shows the key components and external relations
 ```mermaid
 graph LR
     %% External Systems
-    Claude["Claude Desktop
-    (MCP Client)"]
+    Claude["Claude Desktop<br>(MCP Client)"]
     BraveAPI["Brave Search API"]
     ClaudeAPI["Claude API"]
     
     %% Main Components
     subgraph ResearchMCP["ResearchMCP Server"]
-        MCPEndpoint["/mcp/search
-        Standard MCP Endpoint"]
-        ResearchEndpoint["/research
-        Enhanced Analysis Endpoint"]
+        MCPEndpoint["/mcp/search<br>Standard MCP Endpoint"]
+        ResearchEndpoint["/research<br>Enhanced Analysis Endpoint"]
     end
     
-    %% External Connections
-    Claude -->|1. Search Request| MCPEndpoint
-    MCPEndpoint -->|2. Search Query| BraveAPI
-    BraveAPI -->|3. Search Results| MCPEndpoint
-    MCPEndpoint -->|4. MCP Response| Claude
+    %% External Connections - MCP Flow
+    Claude -->|1-Search| MCPEndpoint
+    MCPEndpoint -->|2-Query| BraveAPI
+    BraveAPI -->|3-Results| MCPEndpoint
+    MCPEndpoint -->|4-Response| Claude
     
-    Claude -->|A. Research Request| ResearchEndpoint
-    ResearchEndpoint -->|B. Search Query| BraveAPI
-    BraveAPI -->|C. Search Results| ResearchEndpoint
-    ResearchEndpoint -->|D. Analysis Request| ClaudeAPI
-    ClaudeAPI -->|E. Analysis Results| ResearchEndpoint
-    ResearchEndpoint -->|F. Enhanced Response| Claude
+    %% External Connections - Research Flow
+    Claude -->|A-Request| ResearchEndpoint
+    ResearchEndpoint -->|B-Query| BraveAPI
+    BraveAPI -->|C-Results| ResearchEndpoint
+    ResearchEndpoint -->|D-Analysis| ClaudeAPI
+    ClaudeAPI -->|E-Results| ResearchEndpoint
+    ResearchEndpoint -->|F-Response| Claude
     
     %% Styling
     classDef external fill:#f9e6d2,stroke:#333,stroke-width:2px,color:#000
@@ -186,8 +185,7 @@ The following detailed diagram illustrates the complete system architecture and 
 ```mermaid
 graph TD
     %% External Systems
-    Claude["Claude Desktop
-    (MCP Client)"]
+    Claude["Claude Desktop<br>(MCP Client)"]
     BraveAPI["Brave Search API"]
     ClaudeAPI["Claude API"]
     
@@ -220,31 +218,31 @@ graph TD
         end
     end
     
-    %% Connections
-    Claude -->|1. MCP Request| MCPRoute
-    MCPRoute -->|2. Process Request| SearchService
-    SearchService -->|3. Call Adapter| SearchAdapter
+    %% MCP Search Flow
+    Claude -->|1-Request| MCPRoute
+    MCPRoute -->|2-Process| SearchService
+    SearchService -->|3-Call| SearchAdapter
     SearchAdapter -.->|Interface| BraveAdapter
-    BraveAdapter -->|4. API Call| BraveAPI
-    BraveAPI -->|5. Search Results| BraveAdapter
-    BraveAdapter -->|6. Map Results| SearchService
-    SearchService -->|7. Format Response| MCPRoute
-    MCPRoute -->|8. MCP Response| Claude
+    BraveAdapter -->|4-APICall| BraveAPI
+    BraveAPI -->|5-Results| BraveAdapter
+    BraveAdapter -->|6-MapData| SearchService
+    SearchService -->|7-Format| MCPRoute
+    MCPRoute -->|8-Response| Claude
     
     %% Research Flow
-    Claude -->|1. Research Request| ResearchRoute
-    ResearchRoute -->|2. Process Request| ResearchService
-    ResearchService -->|3. Get Search Results| SearchService
-    ResearchService -->|4. Analyze Results| ClaudeAdapter
+    Claude -->|1-Request| ResearchRoute
+    ResearchRoute -->|2-Process| ResearchService
+    ResearchService -->|3-GetData| SearchService
+    ResearchService -->|4-Analyze| ClaudeAdapter
     ClaudeAdapter -.->|Interface| AnthropicAdapter
-    AnthropicAdapter -->|5. API Call| ClaudeAPI
-    ClaudeAPI -->|6. Analysis Results| AnthropicAdapter
-    AnthropicAdapter -->|7. Process Results| ResearchService
-    ResearchService -->|8. Format Response| ResearchRoute
-    ResearchRoute -->|9. Research Response| Claude
+    AnthropicAdapter -->|5-APICall| ClaudeAPI
+    ClaudeAPI -->|6-Results| AnthropicAdapter
+    AnthropicAdapter -->|7-Process| ResearchService
+    ResearchService -->|8-Format| ResearchRoute
+    ResearchRoute -->|9-Response| Claude
     
     %% Cache Flow
-    BraveAdapter <-->|Cache Results| CacheAdapter
+    BraveAdapter <-->|Cache| CacheAdapter
     CacheAdapter -.->|Interface| MemoryCache
     
     %% Styling
