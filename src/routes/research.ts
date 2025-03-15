@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { ResearchService } from "../services/researchService.ts";
-import { McpRequest } from "../models/mcp.ts";
+import { McpRequest, McpResult } from "../models/mcp.ts";
 import { getErrorSafe, getValueSafe } from "../utils/resultUtils.ts";
 
 const researchRequestSchema = z.object({
@@ -20,7 +20,7 @@ export interface ResearchSuccessResponse {
   status: "success";
   result: {
     query: string;
-    searchResults: ReadonlyArray<unknown>;
+    searchResults: ReadonlyArray<McpResult>;
     summary: string;
     insights: string[];
     sources: string[];
@@ -31,10 +31,10 @@ export interface ResearchErrorResponse {
   status: "error";
   message: string;
   type?: string;
-  error?: unknown;
+  error?: Record<string, unknown> | string;
   result?: {
     query: string;
-    searchResults: ReadonlyArray<unknown>;
+    searchResults: ReadonlyArray<McpResult>;
     summary: string;
     insights: string[];
     sources: string[];

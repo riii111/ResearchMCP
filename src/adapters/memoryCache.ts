@@ -11,7 +11,7 @@ export class MemoryCacheAdapter implements CacheAdapter {
 
   get<T>(key: string): Promise<Result<T | undefined, CacheError>> {
     try {
-      const entry = this.storage.get(key) as CacheEntry<T> | undefined;
+      const entry = this.storage.get(key);
 
       if (!entry) {
         return Promise.resolve(ok(undefined));
@@ -22,7 +22,7 @@ export class MemoryCacheAdapter implements CacheAdapter {
         return Promise.resolve(ok(undefined));
       }
 
-      return Promise.resolve(ok(entry.value));
+      return Promise.resolve(ok(entry.value as T));
     } catch (error) {
       return Promise.resolve(err({
         type: "storage",
