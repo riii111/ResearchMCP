@@ -48,7 +48,7 @@ functionality equivalent to ChatGPT's DeepResearch.
 ## Project Structure
 
 - `src/`: Source code
-  - `adapters/`: External service adapters 
+  - `adapters/`: External service adapters
   - `models/`: Domain models and type definitions
   - `routes/`: API route definitions
   - `services/`: Business logic
@@ -276,11 +276,14 @@ graph TD
 
 3. **Data Flow**:
    - **MCP Flow**: Client → MCP Endpoint → SearchService → BraveSearchAdapter → Brave API → Client
-   - **Research Flow**: Client → Research Endpoint → ResearchService → SearchService + ClaudeAdapter → Client
+   - **Research Flow**: Client → Research Endpoint → ResearchService → SearchService + ClaudeAdapter
+     → Client
 
 4. **Port and Adapter Pattern**:
    - Core application logic is isolated from external dependencies
    - Interfaces (SearchAdapter, CacheAdapter, ClaudeAdapter) define the "ports"
-   - Implementations (BraveSearchAdapter, MemoryCacheAdapter, AnthropicClaudeAdapter) provide concrete implementations
+   - Implementations (BraveSearchAdapter, MemoryCacheAdapter, AnthropicClaudeAdapter) provide
+     concrete implementations
 
-This architecture enables flexible extension and replacement of components while maintaining a clean separation of concerns.
+This architecture enables flexible extension and replacement of components while maintaining a clean
+separation of concerns.
