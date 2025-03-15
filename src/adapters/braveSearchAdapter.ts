@@ -65,9 +65,14 @@ export class BraveSearchAdapter implements SearchAdapter {
     if (query.country) params.country = query.country;
     if (query.language) params.search_lang = query.language;
 
+    const urlParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined) urlParams.append(key, String(value));
+    });
+
     try {
       const response = await fetch(
-        `${BRAVE_API_ENDPOINT}?${new URLSearchParams(params as unknown as Record<string, string>)}`,
+        `${BRAVE_API_ENDPOINT}?${urlParams}`,
         {
           headers: {
             "Accept": "application/json",
