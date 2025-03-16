@@ -2,6 +2,7 @@
   "tasks": {
     "start": "deno run --allow-net --allow-env main.ts",
     "dev": "deno run --watch --allow-net --allow-env main.ts",
+    "mcp": "deno run --allow-net --allow-env cli.ts",
     "test": "deno test --allow-net --allow-env",
     "lint": "deno lint",
     "fmt": "deno fmt",
@@ -28,7 +29,10 @@
     "hono/secure-headers": "npm:hono@4.1.2/secure-headers",
     "neverthrow": "npm:neverthrow@6.1.0",
     "zod": "npm:zod@3.22.4",
-    "std/": "https://deno.land/std@0.211.0/"
+    "std/": "https://deno.land/std@0.211.0/",
+    "@modelcontextprotocol/sdk": "npm:@modelcontextprotocol/sdk@1.7.0",
+    "@modelcontextprotocol/sdk/server/mcp": "npm:@modelcontextprotocol/sdk@1.7.0/server/mcp.js",
+    "@modelcontextprotocol/sdk/server/stdio": "npm:@modelcontextprotocol/sdk@1.7.0/server/stdio.js"
   },
   "compilerOptions": {
     "lib": ["DOM", "ESNext"],

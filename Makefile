@@ -14,6 +14,7 @@ help:
 	@echo "Local Development Commands:"
 	@echo "make start       - Run the application locally"
 	@echo "make dev         - Run the application locally in development mode with watch"
+	@echo "make mcp         - Run the MCP server for Claude Desktop"
 	@echo "make test        - Run tests locally"
 	@echo "make lint        - Run linter locally"
 	@echo "make format      - Format code locally"
@@ -40,6 +41,9 @@ start:
 
 dev:
 	deno task dev
+
+mcp:
+	deno task mcp
 
 test:
 	deno task test
