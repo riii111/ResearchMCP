@@ -11,7 +11,7 @@ import { createMcpRouter } from "./src/routes/mcp.ts";
 import { createResearchRouter } from "./src/routes/research.ts";
 
 const app = new Hono();
-const port = parseInt(Deno.env.get("PORT") || "8000");
+const port = parseInt(Deno.env.get("PORT") || "8088");
 const braveApiKey = Deno.env.get("BRAVE_API_KEY");
 const claudeApiKey = Deno.env.get("CLAUDE_API_KEY");
 

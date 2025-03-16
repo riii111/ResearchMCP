@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: ./docker/Dockerfile
     ports:
-      - "8080:8000"
+      - "8088:8088"
     environment:
       - BRAVE_API_KEY=${BRAVE_API_KEY}
       - CLAUDE_API_KEY=${CLAUDE_API_KEY}

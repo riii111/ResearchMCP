@@ -57,7 +57,15 @@ check:
 d-build:
 	docker compose -f $(COMPOSE_FILE) build
 
+d-build-n:
+	docker compose -f $(COMPOSE_FILE) build --no-cache
+
 d-up:
+	docker compose -f $(COMPOSE_FILE) up -d
+
+d-re:
+	docker compose -f $(COMPOSE_FILE) down -v
+	docker compose -f $(COMPOSE_FILE) build --no-cache
 	docker compose -f $(COMPOSE_FILE) up -d
 
 d-down:
