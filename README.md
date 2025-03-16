@@ -8,7 +8,6 @@ functionality equivalent to ChatGPT's DeepResearch.
 - **Runtime**: Deno
 - **Framework**: Hono
 - **Error Handling**: Neverthrow (Result<T, E> pattern)
-- **Validation**: Hono's built-in validator (extended as needed)
 - **Deployment**: Docker container
 
 ## Setup
@@ -20,123 +19,45 @@ functionality equivalent to ChatGPT's DeepResearch.
 3. Set environment variables
    - `BRAVE_API_KEY`: Brave Search API key
    - `CLAUDE_API_KEY`: Claude API key (optional)
-4. Initialize the local development environment:
-
+4. Run the application:
    ```
-   make local-init
-   ```
-
-5. Run the application locally:
-
-   ```
-   make local-dev
+   make dev  # HTTP server
+   make mcp  # MCP server for Claude Desktop
    ```
 
 ### Container Environment
 
 1. Install Docker and Docker Compose
-2. Set environment variables
-   - `BRAVE_API_KEY`: Brave Search API key
-   - `CLAUDE_API_KEY`: Claude API key (optional)
+2. Set environment variables in a `.env` file
 3. Build and run the container:
-
    ```
    make d-build
    make d-up
    ```
 
-## Project Structure
-
-- `src/`: Source code
-  - `adapters/`: External service adapters
-  - `models/`: Domain models and type definitions
-  - `routes/`: API route definitions
-  - `services/`: Business logic
-  - `utils/`: Utility functions
-- `tests/`: Test files
-- `.rules/`: Project requirements and rules
-- `docker/`: Docker-related files
-
-## Development Workflow
-
-### Local Development
-
-For local development without Docker:
+## Development Commands
 
 ```bash
-# Start the development server with watch mode
-make dev
+# Local development
+make dev     # Start HTTP server with watch mode
+make mcp     # Start MCP server for Claude Desktop
+make test    # Run tests
+make lint    # Run linter
+make format  # Format code
+make check   # Type check
 
-# Start the MCP server (for Claude Desktop)
-make mcp
-
-# Run tests
-make test
-
-# Run linter
-make lint
-
-# Format code
-make format
-
-# Type check
-make check
+# Docker development
+make d-build  # Build the image
+make d-dev    # Start container with live reload
+make d-up     # Run in background
+make d-logs   # View logs
+make d-down   # Stop container
 ```
 
-### Docker-based Development
+## MCP Integration with Claude Desktop
 
-For development inside Docker (recommended for consistent environment):
-
-```bash
-# Build the Docker image
-make d-build
-
-# Start the container in foreground with live reloading
-make d-dev
-
-# Run in background
-make d-up
-make d-logs
-
-# Stop the container
-make d-down
-```
-
-The Docker setup includes volume mounts for the project directory, so any code changes will be
-immediately reflected in the running container.
-
-## Hybrid Development Approach
-
-This project supports a hybrid development approach where you can:
-
-1. Use your local IDE/editor for code editing
-2. Run the application and tests either locally or in a container
-3. Share dependencies and configurations consistently
-
-Choose the workflow that best suits your preferences and needs.
-
-## Environment Variables
-
-Create a `.env` file with the following variables:
-
-```
-BRAVE_API_KEY=your_brave_search_api_key
-CLAUDE_API_KEY=your_claude_api_key
-```
-
-These will be automatically loaded by Docker Compose in container mode.
-
-## MCP Integration
-
-ResearchMCP can be used with Claude Desktop through the Model Context Protocol (MCP):
-
-1. Clone the repository and set up the environment variables
-2. Run the MCP server:
-   ```bash
-   make mcp
-   ```
-3. In Claude Desktop, add a new MCP server with the following configuration in
-   `claude_desktop_config.json`:
+1. Run the MCP server: `make mcp`
+2. In Claude Desktop, add a new MCP server with the following configuration:
 
    ```json
    {
@@ -154,59 +75,43 @@ ResearchMCP can be used with Claude Desktop through the Model Context Protocol (
    }
    ```
 
-   Replace `/absolute/path/to/ResearchMCP/cli.ts` with the actual path to the cli.ts file and
-   provide your Brave API key
+   Replace `/absolute/path/to/ResearchMCP/cli.ts` with the actual path to the cli.ts file.
 
-The MCP server provides a search tool that can be used by Claude to perform web searches through
-Brave Search.
+### Known Limitations
 
-### Notes on MCP Implementation
+- **Language Support**: Brave Search API has limited support for non-Latin characters. Searches in Japanese, Chinese, Korean, and other non-Latin script languages may fail with encoding errors. For best results, use English queries.
 
-- The MCP server implements the core `search` tool functionality
-- Minimal implementations of `resources` and `prompts` capabilities are included for compatibility
-- The server uses the Model Context Protocol (MCP) SDK for standard-compliant implementation
+### Features
 
-## System Architecture
+- **Web Search**: Search the web using Brave Search API through Claude Desktop
+- **MCP Protocol**: Full compliance with the Model Context Protocol
+- **Caching**: Search results are cached to improve performance and reduce API calls
+- **Research**: Enhanced analysis of search results (with Claude API key)
 
-### High-Level Overview
-
-The following simplified diagram shows the key components and external relationships:
+## Architecture Overview
 
 ```mermaid
 graph LR
-    %% External Systems
     Claude["Claude Desktop<br>(MCP Client)"]
     BraveAPI["Brave Search API"]
     ClaudeAPI["Claude API"]
     
-    %% Main Components
     subgraph ResearchMCP["ResearchMCP Server"]
-        MCPEndpoint["/mcp/search<br>Standard MCP Endpoint"]
-        MCPServer["MCP Server<br>(stdio protocol)"]
-        ResearchEndpoint["/research<br>Enhanced Analysis Endpoint"]
+        MCPEndpoint["/mcp/search Endpoint"]
+        MCPServer["MCP Server (stdio)"]
+        ResearchEndpoint["/research Endpoint"]
     end
     
-    %% External Connections - MCP Flow (HTTP)
-    Claude -->|1-Search| MCPEndpoint
-    MCPEndpoint -->|2-Query| BraveAPI
-    BraveAPI -->|3-Results| MCPEndpoint
-    MCPEndpoint -->|4-Response| Claude
+    Claude -->|Search| MCPServer
+    MCPServer -->|Query| BraveAPI
+    BraveAPI -->|Results| MCPServer
+    MCPServer -->|Response| Claude
     
-    %% External Connections - MCP Flow (stdio)
-    Claude -->|1-Search| MCPServer
-    MCPServer -->|2-Query| BraveAPI
-    BraveAPI -->|3-Results| MCPServer
-    MCPServer -->|4-Response| Claude
+    Claude -->|Research| ResearchEndpoint
+    ResearchEndpoint -->|Query| BraveAPI
+    ResearchEndpoint -->|Analyze| ClaudeAPI
+    ResearchEndpoint -->|Response| Claude
     
-    %% External Connections - Research Flow
-    Claude -->|A-Request| ResearchEndpoint
-    ResearchEndpoint -->|B-Query| BraveAPI
-    BraveAPI -->|C-Results| ResearchEndpoint
-    ResearchEndpoint -->|D-Analysis| ClaudeAPI
-    ClaudeAPI -->|E-Results| ResearchEndpoint
-    ResearchEndpoint -->|F-Response| Claude
-    
-    %% Styling
     classDef external fill:#f9e6d2,stroke:#333,stroke-width:2px,color:#000
     classDef component fill:#e6f5ed,stroke:#333,color:#000
     classDef container fill:#f5f5f5,stroke:#333,color:#000
@@ -216,124 +121,6 @@ graph LR
     class ResearchMCP container
 ```
 
-This simplified diagram focuses on how the system interacts with external components:
-
-1. **Standard MCP Flow** (Numbers 1-4):
-   - Claude Desktop sends a search request to the standard MCP endpoint
-   - The server queries Brave Search API and returns formatted results
-
-2. **Enhanced Research Flow** (Letters A-F):
-   - Claude Desktop sends a request to the research endpoint
-   - The server queries Brave Search API for results
-   - The results are sent to Claude API for analysis and summarization
-   - An enhanced response with summary, insights, and sources is returned
-
-### Detailed Architecture
-
-The following detailed diagram illustrates the complete system architecture and data flow:
-
-```mermaid
-graph TD
-    %% External Systems
-    Claude["Claude Desktop<br>(MCP Client)"]
-    BraveAPI["Brave Search API"]
-    ClaudeAPI["Claude API"]
-    
-    %% ResearchMCP Components
-    subgraph ResearchMCP["ResearchMCP Server"]
-        %% Routes Layer
-        subgraph Routes["Routes Layer"]
-            MCPRoute["/mcp/search Endpoint"]
-            ResearchRoute["/research Endpoint"]
-        end
-        
-        %% Service Layer
-        subgraph Services["Services Layer"]
-            SearchService["SearchService"]
-            ResearchService["ResearchService"]
-        end
-        
-        %% Adapters Layer
-        subgraph Adapters["Adapters Layer (Ports)"]
-            SearchAdapter["SearchAdapter Interface"]
-            CacheAdapter["CacheAdapter Interface"]
-            ClaudeAdapter["ClaudeAdapter Interface"]
-        end
-        
-        %% Adapter Implementations
-        subgraph Implementations["Adapter Implementations"]
-            BraveAdapter["BraveSearchAdapter"]
-            MemoryCache["MemoryCacheAdapter"]
-            AnthropicAdapter["AnthropicClaudeAdapter"]
-        end
-    end
-    
-    %% MCP Search Flow
-    Claude -->|1-Request| MCPRoute
-    MCPRoute -->|2-Process| SearchService
-    SearchService -->|3-Call| SearchAdapter
-    SearchAdapter -.->|Interface| BraveAdapter
-    BraveAdapter -->|4-APICall| BraveAPI
-    BraveAPI -->|5-Results| BraveAdapter
-    BraveAdapter -->|6-MapData| SearchService
-    SearchService -->|7-Format| MCPRoute
-    MCPRoute -->|8-Response| Claude
-    
-    %% Research Flow
-    Claude -->|1-Request| ResearchRoute
-    ResearchRoute -->|2-Process| ResearchService
-    ResearchService -->|3-GetData| SearchService
-    ResearchService -->|4-Analyze| ClaudeAdapter
-    ClaudeAdapter -.->|Interface| AnthropicAdapter
-    AnthropicAdapter -->|5-APICall| ClaudeAPI
-    ClaudeAPI -->|6-Results| AnthropicAdapter
-    AnthropicAdapter -->|7-Process| ResearchService
-    ResearchService -->|8-Format| ResearchRoute
-    ResearchRoute -->|9-Response| Claude
-    
-    %% Cache Flow
-    BraveAdapter <-->|Cache| CacheAdapter
-    CacheAdapter -.->|Interface| MemoryCache
-    
-    %% Styling
-    classDef external fill:#f9e6d2,stroke:#333,stroke-width:2px,color:#000
-    classDef layer fill:#e7f2fa,stroke:#333,stroke-width:1px,color:#000
-    classDef component fill:#e6f5ed,stroke:#333,color:#000
-    classDef interface fill:#fff2cc,stroke:#333,color:#000
-    classDef container fill:#f5f5f5,stroke:#333,color:#000
-    
-    class Claude,BraveAPI,ClaudeAPI external
-    class Routes,Services,Adapters,Implementations layer
-    class MCPRoute,ResearchRoute,SearchService,ResearchService component
-    class SearchAdapter,CacheAdapter,ClaudeAdapter interface
-    class BraveAdapter,MemoryCache,AnthropicAdapter component
-    class ResearchMCP container
-```
-
-### Architecture Explanation
-
-1. **Client Interaction**:
-   - Claude Desktop (or any MCP-compatible client) sends requests to the ResearchMCP server
-   - Two main endpoints are available:
-     - `/mcp/search`: Standard MCP-compliant search endpoint
-     - `/research`: Enhanced endpoint with Claude-powered analysis
-
-2. **Layered Architecture**:
-   - **Routes Layer**: Handles HTTP requests/responses and validation
-   - **Services Layer**: Contains business logic for search and research
-   - **Adapters Layer**: Defines interfaces (ports) for external dependencies
-   - **Implementations**: Concrete implementations of the adapter interfaces
-
-3. **Data Flow**:
-   - **MCP Flow**: Client → MCP Endpoint → SearchService → BraveSearchAdapter → Brave API → Client
-   - **Research Flow**: Client → Research Endpoint → ResearchService → SearchService + ClaudeAdapter
-     → Client
-
-4. **Port and Adapter Pattern**:
-   - Core application logic is isolated from external dependencies
-   - Interfaces (SearchAdapter, CacheAdapter, ClaudeAdapter) define the "ports"
-   - Implementations (BraveSearchAdapter, MemoryCacheAdapter, AnthropicClaudeAdapter) provide
-     concrete implementations
-
-This architecture enables flexible extension and replacement of components while maintaining a clean
-separation of concerns.
+The MCP server provides a search tool that can be used by Claude to perform web searches through
+Brave Search API. It implements the core `search` tool functionality along with minimal implementations
+of `resources` and `prompts` capabilities for compatibility.
