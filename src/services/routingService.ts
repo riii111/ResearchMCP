@@ -35,9 +35,15 @@ export class RoutingService {
     }
     
     // Use specified category or classify the query
-    const category = params.routing?.category || await this.classifyQuery(params.q);
-    if (typeof category === "string") {
-      return err(category as unknown as SearchError);
+    let category: QueryCategory;
+    if (params.routing?.category) {
+      category = params.routing.category;
+    } else {
+      const result = this.classifyQuery(params.q);
+      if (result.isErr()) {
+        return err(result.error);
+      }
+      category = result.value;
     }
     
     // Get adapters for the category
@@ -68,11 +74,11 @@ export class RoutingService {
   ): Promise<Result<SearchResponse, SearchError>> {
     // If category not provided, classify the query
     if (!category) {
-      const classificationResult = await this.classifyQuery(params.q);
-      if (typeof classificationResult === "string") {
-        return err(classificationResult as unknown as SearchError);
+      const result = this.classifyQuery(params.q);
+      if (result.isErr()) {
+        return err(result.error);
       }
-      category = classificationResult;
+      category = result.value;
     }
     
     // Get adapters for the category
@@ -146,18 +152,19 @@ export class RoutingService {
   
   /**
    * Helper method to classify a query
+   * @returns Success: QueryCategory, Error: SearchError
    */
-  private classifyQuery(query: string): QueryCategory | string {
+  private classifyQuery(query: string): Result<QueryCategory, SearchError> {
     const categoryResult = this.queryClassifier.classifyQuery(query);
     
     if (categoryResult.isErr()) {
-      return {
+      return err({
         type: "classification_error",
         message: categoryResult.error.message,
-      };
+      });
     }
     
-    return categoryResult.value;
+    return ok(categoryResult.value);
   }
   
   /**

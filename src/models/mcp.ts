@@ -9,6 +9,8 @@ export interface McpOptions {
   readonly country?: string;
   readonly language?: string;
   readonly freshness?: "day" | "week" | "month";
+  readonly parallel?: boolean;
+  readonly adapter?: string;
 }
 
 export type McpResponse = McpSuccessResponse | McpErrorResponse;
@@ -17,6 +19,7 @@ export interface McpSuccessResponse {
   readonly results: ReadonlyArray<McpResult>;
   readonly status: "success";
   readonly message?: string;
+  readonly source?: string;
 }
 
 export interface McpErrorResponse {
@@ -31,6 +34,7 @@ export interface McpResult {
   readonly url: string;
   readonly snippet: string;
   readonly published?: string;
+  readonly source?: string;
 }
 
 export type McpError =
