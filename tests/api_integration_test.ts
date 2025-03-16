@@ -12,13 +12,14 @@ import { SearchService } from "../src/services/searchService.ts";
 import { ResearchService } from "../src/services/researchService.ts";
 import { createMcpRouter } from "../src/routes/mcp.ts";
 import { createResearchRouter } from "../src/routes/research.ts";
-import { QueryParams, SearchError, SearchResponse } from "../src/models/search.ts";
+import { QueryParams, SearchError, SearchResponse, SearchResult } from "../src/models/search.ts";
+import { QueryCategory } from "../src/models/routing.ts";
 import { McpResponse } from "../src/models/mcp.ts";
 
 // MockRoutingService implements the minimum required interface for testing
 class MockRoutingService {
   // Mock implementation of required properties and methods
-  queryClassifier: any = {};
+  queryClassifier = {};
 
   constructor(private readonly mockResults: Result<SearchResponse, SearchError>) {}
 
@@ -30,15 +31,15 @@ class MockRoutingService {
     return Promise.resolve(this.mockResults);
   }
 
-  classifyQuery(_query: string): Result<any, any> {
-    return ok("general");
+  classifyQuery(_query: string): Result<QueryCategory, unknown> {
+    return ok("general" as QueryCategory);
   }
 
-  deduplicateResults(results: any[]): any[] {
+  deduplicateResults(results: SearchResult[]): SearchResult[] {
     return results;
   }
 
-  sortByRelevance(results: any[]): any[] {
+  sortByRelevance(results: SearchResult[]): SearchResult[] {
     return results;
   }
 }
