@@ -67,6 +67,9 @@ For local development without Docker:
 # Start the development server with watch mode
 make dev
 
+# Start the MCP server (for Claude Desktop)
+make mcp
+
 # Run tests
 make test
 
@@ -123,6 +126,46 @@ CLAUDE_API_KEY=your_claude_api_key
 
 These will be automatically loaded by Docker Compose in container mode.
 
+## MCP Integration
+
+ResearchMCP can be used with Claude Desktop through the Model Context Protocol (MCP):
+
+1. Clone the repository and set up the environment variables
+2. Run the MCP server:
+   ```bash
+   make mcp
+   ```
+3. In Claude Desktop, add a new MCP server with the following configuration in
+   `claude_desktop_config.json`:
+
+   ```json
+   {
+     "mcpServers": {
+       "BraveSearch": {
+         "description": "Web search powered by Brave Search API",
+         "command": "/absolute/path/to/ResearchMCP/cli.ts",
+         "args": [],
+         "transport": "stdio",
+         "env": {
+           "BRAVE_API_KEY": "your_brave_api_key_here"
+         }
+       }
+     }
+   }
+   ```
+
+   Replace `/absolute/path/to/ResearchMCP/cli.ts` with the actual path to the cli.ts file and
+   provide your Brave API key
+
+The MCP server provides a search tool that can be used by Claude to perform web searches through
+Brave Search.
+
+### Notes on MCP Implementation
+
+- The MCP server implements the core `search` tool functionality
+- The server does not implement optional capabilities like `resources/list` and `prompts/list`
+- Some "Method not found" errors in logs are expected and do not affect functionality
+
 ## System Architecture
 
 ### High-Level Overview
@@ -139,14 +182,21 @@ graph LR
     %% Main Components
     subgraph ResearchMCP["ResearchMCP Server"]
         MCPEndpoint["/mcp/search<br>Standard MCP Endpoint"]
+        MCPServer["MCP Server<br>(stdio protocol)"]
         ResearchEndpoint["/research<br>Enhanced Analysis Endpoint"]
     end
     
-    %% External Connections - MCP Flow
+    %% External Connections - MCP Flow (HTTP)
     Claude -->|1-Search| MCPEndpoint
     MCPEndpoint -->|2-Query| BraveAPI
     BraveAPI -->|3-Results| MCPEndpoint
     MCPEndpoint -->|4-Response| Claude
+    
+    %% External Connections - MCP Flow (stdio)
+    Claude -->|1-Search| MCPServer
+    MCPServer -->|2-Query| BraveAPI
+    BraveAPI -->|3-Results| MCPServer
+    MCPServer -->|4-Response| Claude
     
     %% External Connections - Research Flow
     Claude -->|A-Request| ResearchEndpoint
@@ -162,7 +212,7 @@ graph LR
     classDef container fill:#f5f5f5,stroke:#333,color:#000
     
     class Claude,BraveAPI,ClaudeAPI external
-    class MCPEndpoint,ResearchEndpoint component
+    class MCPEndpoint,MCPServer,ResearchEndpoint component
     class ResearchMCP container
 ```
 
