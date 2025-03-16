@@ -7,6 +7,7 @@ import { MemoryCacheAdapter } from "./src/adapters/cache/memoryCache.ts";
 import { registerBraveSearchAdapter } from "./src/adapters/search/braveSearchAdapter.ts";
 import { registerTavilySearchAdapter } from "./src/adapters/search/tavilySearchAdapter.ts";
 import { registerWikipediaAdapter } from "./src/adapters/search/wikipediaAdapter.ts";
+import { registerGitHubAdapter } from "./src/adapters/search/githubAdapter.ts";
 import { SearchService } from "./src/services/searchService.ts";
 import { ResearchService } from "./src/services/researchService.ts";
 import { QueryClassifierService } from "./src/services/queryClassifierService.ts";
@@ -20,6 +21,7 @@ const port = parseInt(Deno.env.get("PORT") || "8088");
 // API Keys
 const braveApiKey = Deno.env.get("BRAVE_API_KEY");
 const tavilyApiKey = Deno.env.get("TAVILY_API_KEY");
+const githubToken = Deno.env.get("GITHUB_API_TOKEN");
 const claudeApiKey = Deno.env.get("CLAUDE_API_KEY");
 
 if (!braveApiKey) {
@@ -47,6 +49,14 @@ if (tavilyApiKey) {
 // Register Wikipedia adapter (no API key required)
 registerWikipediaAdapter(cacheAdapter);
 console.log("Registered WikipediaAdapter");
+
+// Register GitHub adapter if token is available
+if (githubToken) {
+  registerGitHubAdapter(githubToken, cacheAdapter);
+  console.log("Registered GitHubAdapter");
+} else {
+  console.log("GitHub API integration disabled (no API token)");
+}
 
 // Setup services
 const queryClassifier = new QueryClassifierService();
