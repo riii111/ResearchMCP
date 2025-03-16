@@ -56,6 +56,12 @@ export class BraveSearchAdapter implements SearchAdapter {
     return this.executeWithBackoff(() => this.executeSearch(query));
   }
 
+  /**
+   * Executes a search query against the Brave Search API
+   * Handles URL encoding and proper error responses
+   * @param query The search query parameters
+   * @returns Search results or error information
+   */
   private async executeSearch(query: QueryParams): Promise<Result<SearchResponse, SearchError>> {
     const params: BraveSearchParams = {
       q: query.q,
@@ -82,6 +88,21 @@ export class BraveSearchAdapter implements SearchAdapter {
       );
 
       if (!response.ok) {
+        // Handle 422 errors specifically for encoding issues
+        if (response.status === 422) {
+          try {
+            const errorBody = await response.text();
+            console.error(`422 Error response: ${errorBody}`);
+          } catch (e) {
+            // Ignore error reading response body
+          }
+          
+          return err({
+            type: "invalidQuery", 
+            issues: ["API rejected the query format. Try simplifying your search."],
+          });
+        }
+        
         if (response.status === 429) {
           const retryAfter = response.headers.get("retry-after");
           return err({
@@ -114,6 +135,20 @@ export class BraveSearchAdapter implements SearchAdapter {
 
       return ok(searchResponse);
     } catch (error) {
+      // Special handling for Latin1 encoding errors
+      // NOTE: Brave Search API has limited support for non-Latin characters.
+      // Japanese, Chinese, Korean and other non-Latin script languages may fail
+      // with this encoding error. Users should use English queries for best results.
+      if (
+        error instanceof Error && 
+        error.message.includes("Latin1 range")
+      ) {
+        return err({
+          type: "invalidQuery",
+          issues: ["Query contains characters that cannot be properly encoded. Try using English or Latin script characters."],
+        });
+      }
+      
       return err({
         type: "network",
         message: error instanceof Error ? error.message : "Unknown error",
