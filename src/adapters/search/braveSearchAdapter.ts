@@ -41,13 +41,8 @@ const INITIAL_BACKOFF_MS = 1000;
  * Adapter for the Brave Search API
  */
 export class BraveSearchAdapter implements SearchAdapter {
-  /** Unique identifier for this adapter */
   readonly id = "brave";
-
-  /** Human-readable name for this adapter */
   readonly name = "Brave Search";
-
-  /** Categories of queries this adapter supports */
   readonly supportedCategories: ReadonlyArray<QueryCategory> = [
     "general",
     "programming",
@@ -78,12 +73,6 @@ export class BraveSearchAdapter implements SearchAdapter {
     return this.executeWithBackoff(() => this.executeSearch(params));
   }
 
-  /**
-   * Calculates how relevant this adapter is for the given query and category
-   * @param query Search query text
-   * @param category Query category
-   * @returns Score from 0 to 1, with 1 being most relevant
-   */
   getRelevanceScore(_query: string, category: QueryCategory): number {
     if (category === "general") {
       return 0.9;
@@ -96,12 +85,6 @@ export class BraveSearchAdapter implements SearchAdapter {
     return 0.7;
   }
 
-  /**
-   * Executes a search query against the Brave Search API
-   * Handles URL encoding and proper error responses
-   * @param query The search query parameters
-   * @returns Search results or error information
-   */
   private async executeSearch(query: QueryParams): Promise<Result<SearchResponse, SearchError>> {
     const params: BraveSearchParams = {
       q: query.q,

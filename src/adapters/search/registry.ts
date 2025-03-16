@@ -8,16 +8,10 @@ import { QueryCategory } from "../../models/routing.ts";
 export class SearchAdapterRegistry {
   private adapters = new Map<string, SearchAdapter>();
 
-  /**
-   * Register a search adapter with the registry
-   */
   register(adapter: SearchAdapter): void {
     this.adapters.set(adapter.id, adapter);
   }
 
-  /**
-   * Get a search adapter by its ID
-   */
   getAdapter(id: string): Result<SearchAdapter, Error> {
     const adapter = this.adapters.get(id);
     if (!adapter) {
@@ -26,9 +20,7 @@ export class SearchAdapterRegistry {
     return ok(adapter);
   }
 
-  /**
-   * Get adapters that support a given query category, sorted by relevance score
-   */
+  // Get and sort adapters based on relevance for the query
   getAdaptersForCategory(category: QueryCategory, query: string): SearchAdapter[] {
     const candidates = Array.from(this.adapters.values())
       .filter((adapter) => adapter.supportedCategories.includes(category))

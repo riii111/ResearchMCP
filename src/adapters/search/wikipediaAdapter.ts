@@ -38,13 +38,8 @@ const DEFAULT_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours - Wikipedia conten
  * Adapter for the Wikipedia Search API
  */
 export class WikipediaAdapter implements SearchAdapter {
-  /** Unique identifier for this adapter */
   readonly id = "wikipedia";
-
-  /** Human-readable name for this adapter */
   readonly name = "Wikipedia";
-
-  /** Categories of queries this adapter supports */
   readonly supportedCategories: ReadonlyArray<QueryCategory> = [
     "general",
     "academic",
@@ -72,12 +67,6 @@ export class WikipediaAdapter implements SearchAdapter {
     return await this.executeSearch(params);
   }
 
-  /**
-   * Calculates how relevant this adapter is for the given query and category
-   * @param query Search query text
-   * @param category Query category
-   * @returns Score from 0 to 1, with 1 being most relevant
-   */
   getRelevanceScore(_query: string, category: QueryCategory): number {
     if (category === "academic") {
       return 0.9;
@@ -106,9 +95,6 @@ export class WikipediaAdapter implements SearchAdapter {
     return 0.4;
   }
 
-  /**
-   * Execute a search using the Wikipedia API
-   */
   private async executeSearch(params: QueryParams): Promise<Result<SearchResponse, SearchError>> {
     const startTime = Date.now();
 

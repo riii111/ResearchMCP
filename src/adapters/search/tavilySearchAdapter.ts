@@ -38,13 +38,8 @@ const DEFAULT_CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
  * Adapter for the Tavily Search API
  */
 export class TavilySearchAdapter implements SearchAdapter {
-  /** Unique identifier for this adapter */
   readonly id = "tavily";
-
-  /** Human-readable name for this adapter */
   readonly name = "Tavily Search";
-
-  /** Categories of queries this adapter supports */
   readonly supportedCategories: ReadonlyArray<QueryCategory> = [
     "general",
     "programming",
@@ -74,12 +69,6 @@ export class TavilySearchAdapter implements SearchAdapter {
     return await this.executeSearch(params);
   }
 
-  /**
-   * Calculates how relevant this adapter is for the given query and category
-   * @param query Search query text
-   * @param category Query category
-   * @returns Score from 0 to 1, with 1 being most relevant
-   */
   getRelevanceScore(_query: string, category: QueryCategory): number {
     if (category === "general") {
       return 0.95;
