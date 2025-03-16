@@ -10,16 +10,10 @@ import { RoutingService } from "./routingService.ts";
 export class SearchService {
   constructor(private readonly routingService: RoutingService) {}
 
-  /**
-   * Execute a search using appropriate adapters based on query category
-   */
   async search(params: QueryParams): Promise<Result<SearchResponse, SearchError>> {
     return await this.routingService.routeAndSearch(params);
   }
 
-  /**
-   * Execute a search across multiple adapters
-   */
   async multiSearch(params: QueryParams): Promise<Result<SearchResponse, SearchError>> {
     return await this.routingService.multiSearch(params);
   }

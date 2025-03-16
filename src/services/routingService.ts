@@ -12,9 +12,6 @@ export class RoutingService {
     private readonly queryClassifier: QueryClassifierService,
   ) {}
 
-  /**
-   * Route a search query to the most appropriate adapter based on query category
-   */
   async routeAndSearch(params: QueryParams): Promise<Result<SearchResponse, SearchError>> {
     // Use forced adapter if specified in routing options
     if (params.routing?.forceAdapter) {
@@ -63,9 +60,6 @@ export class RoutingService {
     return await primaryAdapter.search(params);
   }
 
-  /**
-   * Perform parallel search across multiple adapters and merge results
-   */
   async multiSearch(
     params: QueryParams,
     category?: QueryCategory,
@@ -150,10 +144,6 @@ export class RoutingService {
     });
   }
 
-  /**
-   * Helper method to classify a query
-   * @returns Success: QueryCategory, Error: SearchError
-   */
   private classifyQuery(query: string): Result<QueryCategory, SearchError> {
     const categoryResult = this.queryClassifier.classifyQuery(query);
 
@@ -168,9 +158,6 @@ export class RoutingService {
     return ok(categoryResult._unsafeUnwrap());
   }
 
-  /**
-   * Remove duplicate results from merged search results
-   */
   private deduplicateResults(results: SearchResult[]): SearchResult[] {
     const uniqueUrls = new Set<string>();
     return results.filter((result) => {
@@ -182,9 +169,6 @@ export class RoutingService {
     });
   }
 
-  /**
-   * Sort search results by relevance/rank
-   */
   private sortByRelevance(results: SearchResult[]): SearchResult[] {
     return results.sort((a, b) => {
       // If both have relevanceScore, use that

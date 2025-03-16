@@ -143,11 +143,6 @@ export function createMcpServer(searchService: SearchService): McpServer {
   return server;
 }
 
-/**
- * Formats search results into a human-readable text
- * @param results Array of search results
- * @returns Formatted text representation
- */
 function formatSearchResults(results: ReadonlyArray<McpResult>): string {
   if (results.length === 0) {
     return "No results found.";
