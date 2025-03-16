@@ -43,13 +43,18 @@ const INITIAL_BACKOFF_MS = 1000;
 export class BraveSearchAdapter implements SearchAdapter {
   /** Unique identifier for this adapter */
   readonly id = "brave";
-  
+
   /** Human-readable name for this adapter */
   readonly name = "Brave Search";
-  
+
   /** Categories of queries this adapter supports */
   readonly supportedCategories: ReadonlyArray<QueryCategory> = [
-    "general", "programming", "web3", "technical", "academic", "qa"
+    "general",
+    "programming",
+    "web3",
+    "technical",
+    "academic",
+    "qa",
   ];
 
   constructor(
@@ -83,11 +88,11 @@ export class BraveSearchAdapter implements SearchAdapter {
     if (category === "general") {
       return 0.9;
     }
-    
+
     if (category === "programming") {
       return 0.8;
     }
-    
+
     return 0.7;
   }
 

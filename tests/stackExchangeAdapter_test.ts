@@ -84,31 +84,37 @@ Deno.test({
       });
 
       assertEquals(result.isOk(), true);
-      
+
       if (result.isOk()) {
         const response = result.value;
-        
+
         assertEquals(response.source, "stackexchange");
         assertEquals(response.results.length, 2);
         assertEquals(response.totalResults, 2);
-        
+
         const firstResult = response.results[0];
         assertEquals(firstResult.title, "How to use TypeScript with React?");
-        assertEquals(firstResult.url, "https://stackoverflow.com/questions/12345/how-to-use-typescript-with-react");
+        assertEquals(
+          firstResult.url,
+          "https://stackoverflow.com/questions/12345/how-to-use-typescript-with-react",
+        );
         assertExists(firstResult.relevanceScore);
         assertEquals(firstResult.sourceType, "qa");
         assertExists(firstResult.published);
-        
+
         // Verify tags in snippet
         assertEquals(firstResult.snippet.includes("[javascript]"), true);
         assertEquals(firstResult.snippet.includes("[typescript]"), true);
         assertEquals(firstResult.snippet.includes("[reactjs]"), true);
-        
+
         // Verify that the question with accepted answer has higher relevance
         const secondResult = response.results[1];
-        assertEquals(firstResult.relevanceScore !== undefined && 
-                    secondResult.relevanceScore !== undefined && 
-                    firstResult.relevanceScore > secondResult.relevanceScore, true);
+        assertEquals(
+          firstResult.relevanceScore !== undefined &&
+            secondResult.relevanceScore !== undefined &&
+            firstResult.relevanceScore > secondResult.relevanceScore,
+          true,
+        );
       }
     } finally {
       restoreFetch();
@@ -120,32 +126,33 @@ Deno.test({
   name: "StackExchangeAdapter - tag extraction",
   fn: async () => {
     let capturedUrl = "";
-    
+
     // Mock the fetch function to capture the URL
     globalThis.fetch = ((url: RequestInfo | URL) => {
       capturedUrl = url.toString();
-      
+
       // Return a minimal valid response
       return Promise.resolve({
         ok: true,
         status: 200,
-        json: () => Promise.resolve({
-          items: [],
-          has_more: false,
-          quota_max: 300,
-          quota_remaining: 300,
-        }),
+        json: () =>
+          Promise.resolve({
+            items: [],
+            has_more: false,
+            quota_max: 300,
+            quota_remaining: 300,
+          }),
         headers: new Headers(),
       } as Response);
     }) as typeof fetch;
 
     try {
       const adapter = new StackExchangeAdapter();
-      
+
       // Test query with recognized tags
       await adapter.search({ q: "how to use javascript in react project", maxResults: 5 });
       assertEquals(capturedUrl.includes("tagged=javascript%3Breact"), true);
-      
+
       // Test query with no recognized tags
       await adapter.search({ q: "how to solve this problem", maxResults: 5 });
       assertEquals(capturedUrl.includes("tagged="), false);
@@ -168,7 +175,7 @@ Deno.test({
       });
 
       assertEquals(result.isErr(), true);
-      
+
       if (result.isErr()) {
         const error = result.error;
         assertEquals(error.type, "invalidQuery");
@@ -184,21 +191,21 @@ Deno.test({
   name: "StackExchangeAdapter - relevance scores",
   fn: () => {
     const adapter = new StackExchangeAdapter();
-    
+
     const qaScore = adapter.getRelevanceScore("how to do x", "qa");
     const programmingScore = adapter.getRelevanceScore("javascript function", "programming");
     const technicalScore = adapter.getRelevanceScore("system architecture", "technical");
     const generalScore = adapter.getRelevanceScore("what is stack overflow", "general");
-    
+
     // Stack Exchange should score highest for Q&A content
     assertEquals(qaScore, 0.95);
     assertEquals(programmingScore, 0.9);
     assertEquals(technicalScore, 0.8);
     assertEquals(generalScore, 0.3);
-    
+
     // All scores should be between 0 and 1
     const scores = [qaScore, programmingScore, technicalScore, generalScore];
-    scores.forEach(score => {
+    scores.forEach((score) => {
       assertEquals(score >= 0 && score <= 1, true);
     });
   },

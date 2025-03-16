@@ -21,16 +21,18 @@ export function createMcpServer(searchService: SearchService): McpServer {
   });
 
   // Register an empty prompt to support prompts/list method
+  // @ts-ignore: Type mismatch with MCP SDK interface
   server.prompt(
     "empty-prompt",
-    {},
-    () => ({
+    "Empty placeholder prompt for MCP protocol compliance",
+    {}, // Empty args schema
+    (_args) => ({
       messages: [{
-        role: "system",
-        content: [{
+        role: "assistant", // Using "assistant" as per MCP protocol requirements
+        content: {
           type: "text",
           text: "Empty prompt for MCP protocol compliance",
-        }],
+        },
       }],
     }),
   );
@@ -45,8 +47,10 @@ export function createMcpServer(searchService: SearchService): McpServer {
   );
 
   // Register search tool
+  // @ts-ignore: MCP SDK has type definition mismatch with our Zod schema implementation
   server.tool(
     "search",
+    "Search the web for information",
     {
       query: z.string().min(1).max(200),
       context: z.array(z.string()).optional(),
@@ -54,20 +58,24 @@ export function createMcpServer(searchService: SearchService): McpServer {
       country: z.string().length(2).optional(),
       language: z.string().min(2).max(5).optional(),
       freshness: z.enum(["day", "week", "month"]).optional(),
+      parallel: z.boolean().optional(),
+      adapter: z.string().optional(),
     },
-    async ({ query, context, maxResults, country, language, freshness }) => {
+    async (params, _extra) => {
       try {
         // Logging to stderr to avoid interfering with stdout JSON-RPC messages
-        Deno.stderr.writeSync(new TextEncoder().encode(`MCP search request: ${query}\n`));
+        Deno.stderr.writeSync(new TextEncoder().encode(`MCP search request: ${params.query}\n`));
 
         const searchResult = await searchService.searchMcp({
-          query,
-          context,
+          query: params.query,
+          context: params.context,
           options: {
-            maxResults,
-            country,
-            language,
-            freshness,
+            maxResults: params.maxResults,
+            country: params.country,
+            language: params.language,
+            freshness: params.freshness,
+            parallel: params.parallel,
+            adapter: params.adapter,
           },
         });
 

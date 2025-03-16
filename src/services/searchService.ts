@@ -122,10 +122,10 @@ export class SearchService {
 
     return results.filter((result) => {
       // Use relevanceScore if available, otherwise fall back to normalized rank
-      const score = result.relevanceScore !== undefined 
-        ? result.relevanceScore 
+      const score = result.relevanceScore !== undefined
+        ? result.relevanceScore
         : (result.rank ? 1 - (result.rank / 100) : 0);
-      
+
       return score >= minScore;
     });
   }

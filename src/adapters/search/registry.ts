@@ -7,14 +7,14 @@ import { QueryCategory } from "../../models/routing.ts";
  */
 export class SearchAdapterRegistry {
   private adapters = new Map<string, SearchAdapter>();
-  
+
   /**
    * Register a search adapter with the registry
    */
   register(adapter: SearchAdapter): void {
     this.adapters.set(adapter.id, adapter);
   }
-  
+
   /**
    * Get a search adapter by its ID
    */
@@ -25,22 +25,22 @@ export class SearchAdapterRegistry {
     }
     return ok(adapter);
   }
-  
+
   /**
    * Get adapters that support a given query category, sorted by relevance score
    */
   getAdaptersForCategory(category: QueryCategory, query: string): SearchAdapter[] {
     const candidates = Array.from(this.adapters.values())
-      .filter(adapter => adapter.supportedCategories.includes(category))
-      .map(adapter => ({
+      .filter((adapter) => adapter.supportedCategories.includes(category))
+      .map((adapter) => ({
         adapter,
-        score: adapter.getRelevanceScore(query, category)
+        score: adapter.getRelevanceScore(query, category),
       }))
       .sort((a, b) => b.score - a.score);
-    
-    return candidates.map(c => c.adapter);
+
+    return candidates.map((c) => c.adapter);
   }
-  
+
   /**
    * Get all registered adapters
    */

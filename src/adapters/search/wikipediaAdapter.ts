@@ -40,13 +40,15 @@ const DEFAULT_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours - Wikipedia conten
 export class WikipediaAdapter implements SearchAdapter {
   /** Unique identifier for this adapter */
   readonly id = "wikipedia";
-  
+
   /** Human-readable name for this adapter */
   readonly name = "Wikipedia";
-  
+
   /** Categories of queries this adapter supports */
   readonly supportedCategories: ReadonlyArray<QueryCategory> = [
-    "general", "academic", "technical"
+    "general",
+    "academic",
+    "technical",
   ];
 
   constructor(
@@ -80,27 +82,27 @@ export class WikipediaAdapter implements SearchAdapter {
     if (category === "academic") {
       return 0.9;
     }
-    
+
     if (category === "general") {
       return 0.8;
     }
-    
+
     if (category === "technical") {
       return 0.75;
     }
-    
+
     if (category === "programming") {
       return 0.5;
     }
-    
+
     if (category === "web3") {
       return 0.5;
     }
-    
+
     if (category === "qa") {
       return 0.4;
     }
-    
+
     return 0.4;
   }
 
@@ -109,7 +111,7 @@ export class WikipediaAdapter implements SearchAdapter {
    */
   private async executeSearch(params: QueryParams): Promise<Result<SearchResponse, SearchError>> {
     const startTime = Date.now();
-    
+
     // Construct the query URL with search parameters
     const urlParams = new URLSearchParams({
       action: "query",
@@ -137,7 +139,11 @@ export class WikipediaAdapter implements SearchAdapter {
       }
 
       const wikipediaResponse = await response.json() as WikipediaSearchResponse;
-      const searchResponse = this.mapWikipediaResponseToSearchResponse(wikipediaResponse, params, startTime);
+      const searchResponse = this.mapWikipediaResponseToSearchResponse(
+        wikipediaResponse,
+        params,
+        startTime,
+      );
 
       if (this.cache) {
         const cacheKey = createSearchCacheKey(params, this.id);
@@ -162,16 +168,18 @@ export class WikipediaAdapter implements SearchAdapter {
     startTime: number,
   ): SearchResponse {
     const searchResults = wikipediaResponse.query.search;
-    
+
     const results: SearchResult[] = searchResults.map((result, index) => {
       // Remove HTML tags from snippet
       const cleanSnippet = result.snippet.replace(/<\/?[^>]+(>|$)/g, "");
-      
+
       return {
         id: `wikipedia-${result.pageid}`,
         title: result.title,
         // Create Wikipedia URL from title
-        url: `https://${params.language || this.language}.wikipedia.org/wiki/${encodeURIComponent(result.title.replace(/ /g, "_"))}`,
+        url: `https://${params.language || this.language}.wikipedia.org/wiki/${
+          encodeURIComponent(result.title.replace(/ /g, "_"))
+        }`,
         snippet: cleanSnippet,
         published: new Date(result.timestamp),
         rank: index + 1,

@@ -68,7 +68,8 @@ export class GitHubAdapter implements SearchAdapter {
   readonly id = "github";
   readonly name = "GitHub";
   readonly supportedCategories: ReadonlyArray<QueryCategory> = [
-    "programming", "technical"
+    "programming",
+    "technical",
   ];
 
   constructor(
@@ -98,44 +99,59 @@ export class GitHubAdapter implements SearchAdapter {
     if (category === "programming") {
       return 0.95;
     }
-    
+
     if (category === "technical") {
       return 0.8;
     }
-    
+
     return 0.2;
   }
 
   private determineSearchType(query: string): GitHubSearchType {
     // If query contains code-specific terms, search for code
-    const codeTerms = ["function", "class", "def ", "impl ", "type ", "interface", "struct", "enum", 
-                      "code", "snippet", "implementation", "example", "syntax"];
-    
-    if (codeTerms.some(term => query.toLowerCase().includes(term))) {
+    const codeTerms = [
+      "function",
+      "class",
+      "def ",
+      "impl ",
+      "type ",
+      "interface",
+      "struct",
+      "enum",
+      "code",
+      "snippet",
+      "implementation",
+      "example",
+      "syntax",
+    ];
+
+    if (codeTerms.some((term) => query.toLowerCase().includes(term))) {
       return "code";
     }
-    
+
     // Default to repository search
     return "repositories";
   }
 
   private async executeSearch(
-    params: QueryParams, 
-    searchType: GitHubSearchType
+    params: QueryParams,
+    searchType: GitHubSearchType,
   ): Promise<Result<SearchResponse, SearchError>> {
     const startTime = Date.now();
-    
+
     try {
       let results: SearchResult[] = [];
       let totalCount = 0;
-      
+
       if (searchType === "repositories") {
         const repoResult = await this.searchRepositories(params);
         if (repoResult.isErr()) {
           return err(repoResult.error);
         }
-        
-        const repoData = repoResult.value;
+
+        // Type assertion to help TypeScript understand the narrowing
+        // @ts-ignore: Result narrowing
+        const repoData = repoResult._unsafeUnwrap();
         results = repoData.results;
         totalCount = repoData.totalCount;
       } else {
@@ -143,12 +159,14 @@ export class GitHubAdapter implements SearchAdapter {
         if (codeResult.isErr()) {
           return err(codeResult.error);
         }
-        
-        const codeData = codeResult.value;
+
+        // Type assertion to help TypeScript understand the narrowing
+        // @ts-ignore: Result narrowing
+        const codeData = codeResult._unsafeUnwrap();
         results = codeData.results;
         totalCount = codeData.totalCount;
       }
-      
+
       const searchResponse: SearchResponse = {
         query: params,
         results,
@@ -156,12 +174,12 @@ export class GitHubAdapter implements SearchAdapter {
         searchTime: Date.now() - startTime,
         source: this.id,
       };
-      
+
       if (this.cache) {
         const cacheKey = createSearchCacheKey(params, this.id);
         await this.cache.set(cacheKey, searchResponse, DEFAULT_CACHE_TTL_MS);
       }
-      
+
       return ok(searchResponse);
     } catch (error) {
       return err({
@@ -170,9 +188,9 @@ export class GitHubAdapter implements SearchAdapter {
       });
     }
   }
-  
+
   private async searchRepositories(
-    params: QueryParams
+    params: QueryParams,
   ): Promise<Result<{ results: SearchResult[]; totalCount: number }, SearchError>> {
     const searchParams: GitHubSearchParams = {
       q: params.q,
@@ -180,14 +198,14 @@ export class GitHubAdapter implements SearchAdapter {
       sort: "stars",
       order: "desc",
     };
-    
+
     const url = new URL("https://api.github.com/search/repositories");
     Object.entries(searchParams).forEach(([key, value]) => {
       if (value !== undefined) {
         url.searchParams.append(key, String(value));
       }
     });
-    
+
     try {
       const response = await fetch(url.toString(), {
         headers: {
@@ -195,55 +213,56 @@ export class GitHubAdapter implements SearchAdapter {
           "Authorization": `token ${this.token}`,
         },
       });
-      
+
       if (!response.ok) {
         if (response.status === 403) {
           const rateLimit = response.headers.get("X-RateLimit-Remaining");
           const resetTime = response.headers.get("X-RateLimit-Reset");
-          
+
           if (rateLimit === "0" && resetTime) {
             const resetTimeMs = parseInt(resetTime) * 1000;
             const retryAfterMs = resetTimeMs - Date.now();
-            
+
             return err({
               type: "rateLimit",
               retryAfterMs: Math.max(retryAfterMs, 60000), // at least 1 minute
             });
           }
-          
+
           return err({
             type: "authorization",
             message: "GitHub API authorization error or rate limit exceeded",
           });
         }
-        
+
         if (response.status === 401) {
           return err({
             type: "authorization",
             message: "Invalid GitHub API token",
           });
         }
-        
+
         return err({
           type: "network",
           message: `GitHub API error: ${response.status} ${response.statusText}`,
         });
       }
-      
+
       const data = await response.json() as GitHubRepoSearchResponse;
-      
+
       const results: SearchResult[] = data.items.map((repo, index) => ({
         id: `github-repo-${repo.id}`,
         title: repo.full_name,
         url: repo.html_url,
-        snippet: repo.description || `${repo.full_name}: ${repo.stargazers_count} stars, ${repo.forks_count} forks`,
+        snippet: repo.description ||
+          `${repo.full_name}: ${repo.stargazers_count} stars, ${repo.forks_count} forks`,
         published: new Date(repo.updated_at),
         rank: index + 1,
         source: this.name,
         sourceType: "repository",
         relevanceScore: Math.min(1, 0.5 + (repo.stargazers_count / 10000) * 0.5),
       }));
-      
+
       return ok({
         results,
         totalCount: data.total_count,
@@ -251,27 +270,29 @@ export class GitHubAdapter implements SearchAdapter {
     } catch (error) {
       return err({
         type: "network",
-        message: error instanceof Error ? error.message : "Unknown error searching GitHub repositories",
+        message: error instanceof Error
+          ? error.message
+          : "Unknown error searching GitHub repositories",
       });
     }
   }
-  
+
   private async searchCode(
-    params: QueryParams
+    params: QueryParams,
   ): Promise<Result<{ results: SearchResult[]; totalCount: number }, SearchError>> {
     // GitHub code search requires authenticated requests
     const searchParams: GitHubSearchParams = {
       q: params.q,
       per_page: params.maxResults,
     };
-    
+
     const url = new URL("https://api.github.com/search/code");
     Object.entries(searchParams).forEach(([key, value]) => {
       if (value !== undefined) {
         url.searchParams.append(key, String(value));
       }
     });
-    
+
     try {
       const response = await fetch(url.toString(), {
         headers: {
@@ -279,43 +300,43 @@ export class GitHubAdapter implements SearchAdapter {
           "Authorization": `token ${this.token}`,
         },
       });
-      
+
       if (!response.ok) {
         if (response.status === 403) {
           const rateLimit = response.headers.get("X-RateLimit-Remaining");
           const resetTime = response.headers.get("X-RateLimit-Reset");
-          
+
           if (rateLimit === "0" && resetTime) {
             const resetTimeMs = parseInt(resetTime) * 1000;
             const retryAfterMs = resetTimeMs - Date.now();
-            
+
             return err({
               type: "rateLimit",
               retryAfterMs: Math.max(retryAfterMs, 60000), // at least 1 minute
             });
           }
-          
+
           return err({
             type: "authorization",
             message: "GitHub API authorization error or rate limit exceeded",
           });
         }
-        
+
         if (response.status === 401) {
           return err({
             type: "authorization",
             message: "Invalid GitHub API token",
           });
         }
-        
+
         return err({
           type: "network",
           message: `GitHub API error: ${response.status} ${response.statusText}`,
         });
       }
-      
+
       const data = await response.json() as GitHubCodeSearchResponse;
-      
+
       const results: SearchResult[] = data.items.map((code, index) => ({
         id: `github-code-${code.sha}`,
         title: `${code.repository.full_name}: ${code.path}`,
@@ -326,7 +347,7 @@ export class GitHubAdapter implements SearchAdapter {
         sourceType: "code",
         relevanceScore: Math.min(1, 0.3 + code.score * 0.7),
       }));
-      
+
       return ok({
         results,
         totalCount: data.total_count,

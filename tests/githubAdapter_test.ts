@@ -74,25 +74,28 @@ Deno.test({
       });
 
       assertEquals(result.isOk(), true);
-      
+
       if (result.isOk()) {
         const response = result.value;
-        
+
         assertEquals(response.source, "github");
         assertEquals(response.results.length, 2);
         assertEquals(response.totalResults, 2);
-        
+
         const firstResult = response.results[0];
         assertEquals(firstResult.title, "test-user/test-repo");
         assertEquals(firstResult.url, "https://github.com/test-user/test-repo");
         assertEquals(firstResult.snippet, "A test repository");
         assertEquals(firstResult.sourceType, "repository");
         assertExists(firstResult.published);
-        
+
         const secondResult = response.results[1];
         assertEquals(secondResult.title, "test-org/another-repo");
-        assertEquals(secondResult.relevanceScore !== undefined && firstResult.relevanceScore !== undefined && 
-                    secondResult.relevanceScore > firstResult.relevanceScore, true);
+        assertEquals(
+          secondResult.relevanceScore !== undefined && firstResult.relevanceScore !== undefined &&
+            secondResult.relevanceScore > firstResult.relevanceScore,
+          true,
+        );
       }
     } finally {
       restoreFetch();
@@ -150,23 +153,29 @@ Deno.test({
       });
 
       assertEquals(result.isOk(), true);
-      
+
       if (result.isOk()) {
         const response = result.value;
-        
+
         assertEquals(response.source, "github");
         assertEquals(response.results.length, 2);
         assertEquals(response.totalResults, 2);
-        
+
         const firstResult = response.results[0];
         assertEquals(firstResult.title, "test-user/test-repo: src/main.ts");
-        assertEquals(firstResult.url, "https://github.com/test-user/test-repo/blob/main/src/main.ts");
+        assertEquals(
+          firstResult.url,
+          "https://github.com/test-user/test-repo/blob/main/src/main.ts",
+        );
         assertEquals(firstResult.sourceType, "code");
-        
+
         const secondResult = response.results[1];
         assertEquals(secondResult.title, "test-org/another-repo: src/utils/utils.ts");
-        assertEquals(secondResult.relevanceScore !== undefined && firstResult.relevanceScore !== undefined && 
-                    secondResult.relevanceScore < firstResult.relevanceScore, true);
+        assertEquals(
+          secondResult.relevanceScore !== undefined && firstResult.relevanceScore !== undefined &&
+            secondResult.relevanceScore < firstResult.relevanceScore,
+          true,
+        );
       }
     } finally {
       restoreFetch();
@@ -192,7 +201,7 @@ Deno.test({
       });
 
       assertEquals(result.isErr(), true);
-      
+
       if (result.isErr()) {
         const error = result.error;
         assertEquals(error.type, "rateLimit");
@@ -209,31 +218,32 @@ Deno.test({
   fn: async () => {
     // We'll verify the adapter correctly determines search type by checking the API URL
     let capturedUrl = "";
-    
+
     // Mock implementation that captures the URL
     globalThis.fetch = ((url: RequestInfo | URL) => {
       capturedUrl = url.toString();
-      
+
       // Return minimal valid response
       return Promise.resolve({
         ok: true,
         status: 200,
-        json: () => Promise.resolve({
-          total_count: 0,
-          incomplete_results: false,
-          items: [],
-        }),
+        json: () =>
+          Promise.resolve({
+            total_count: 0,
+            incomplete_results: false,
+            items: [],
+          }),
         headers: new Headers(),
       } as Response);
     }) as typeof fetch;
 
     try {
       const adapter = new GitHubAdapter("mock-token");
-      
+
       // Try a repository search
       await adapter.search({ q: "typescript project", maxResults: 5 });
       assertEquals(capturedUrl.includes("/search/repositories"), true);
-      
+
       // Try a code search
       await adapter.search({ q: "function typescript implementation", maxResults: 5 });
       assertEquals(capturedUrl.includes("/search/code"), true);
@@ -247,19 +257,19 @@ Deno.test({
   name: "GitHubAdapter - relevance scores",
   fn: () => {
     const adapter = new GitHubAdapter("mock-token");
-    
+
     const programmingScore = adapter.getRelevanceScore("typescript function", "programming");
     const technicalScore = adapter.getRelevanceScore("system architecture", "technical");
     const generalScore = adapter.getRelevanceScore("what is github", "general");
-    
+
     // GitHub should score highest for programming content
     assertEquals(programmingScore, 0.95);
     assertEquals(technicalScore, 0.8);
     assertEquals(generalScore, 0.2);
-    
+
     // All scores should be between 0 and 1
     const scores = [programmingScore, technicalScore, generalScore];
-    scores.forEach(score => {
+    scores.forEach((score) => {
       assertEquals(score >= 0 && score <= 1, true);
     });
   },

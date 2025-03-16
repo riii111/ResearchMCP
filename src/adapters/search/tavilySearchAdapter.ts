@@ -40,13 +40,17 @@ const DEFAULT_CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
 export class TavilySearchAdapter implements SearchAdapter {
   /** Unique identifier for this adapter */
   readonly id = "tavily";
-  
+
   /** Human-readable name for this adapter */
   readonly name = "Tavily Search";
-  
+
   /** Categories of queries this adapter supports */
   readonly supportedCategories: ReadonlyArray<QueryCategory> = [
-    "general", "programming", "academic", "technical", "qa"
+    "general",
+    "programming",
+    "academic",
+    "technical",
+    "qa",
   ];
 
   constructor(
@@ -80,23 +84,23 @@ export class TavilySearchAdapter implements SearchAdapter {
     if (category === "general") {
       return 0.95;
     }
-    
+
     if (category === "qa") {
       return 0.95;
     }
-    
+
     if (category === "academic" || category === "technical") {
       return 0.85;
     }
-    
+
     if (category === "programming") {
       return 0.8;
     }
-    
+
     if (category === "web3") {
       return 0.7;
     }
-    
+
     return 0.7;
   }
 
@@ -177,7 +181,7 @@ export class TavilySearchAdapter implements SearchAdapter {
   ): SearchResponse {
     // Add the answer as a special result if available
     const results: SearchResult[] = [];
-    
+
     if (tavilyResponse.answer) {
       results.push({
         id: btoa(`tavily-answer-${Date.now()}`),
@@ -190,7 +194,7 @@ export class TavilySearchAdapter implements SearchAdapter {
         relevanceScore: 1.0,
       });
     }
-    
+
     // Add the web search results
     const webResults = tavilyResponse.results.map((result, index) => ({
       id: btoa(result.url),
@@ -203,7 +207,7 @@ export class TavilySearchAdapter implements SearchAdapter {
       sourceType: "web",
       relevanceScore: result.score,
     }));
-    
+
     results.push(...webResults);
 
     return {

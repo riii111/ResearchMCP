@@ -62,7 +62,9 @@ if (githubToken) {
 
 // Register Stack Exchange adapter (works without API key, but has lower rate limits)
 registerStackExchangeAdapter(stackExchangeKey, cacheAdapter);
-console.log("Registered StackExchangeAdapter" + (stackExchangeKey ? " with API key" : " without API key"));
+console.log(
+  "Registered StackExchangeAdapter" + (stackExchangeKey ? " with API key" : " without API key"),
+);
 
 // Setup services
 const queryClassifier = new QueryClassifierService();

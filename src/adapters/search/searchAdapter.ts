@@ -8,17 +8,17 @@ import { QueryCategory } from "../../models/routing.ts";
 export interface SearchAdapter {
   /** Unique identifier for this adapter */
   readonly id: string;
-  
+
   /** Human-readable name for this adapter */
   readonly name: string;
-  
+
   /** Categories of queries this adapter supports */
   readonly supportedCategories: ReadonlyArray<QueryCategory>;
-  
+
   /** Performs a search using the specific search API */
   search(params: QueryParams): Promise<Result<SearchResponse, SearchError>>;
-  
-  /** 
+
+  /**
    * Calculates how relevant this adapter is for the given query and category
    * Returns a value between 0 (not relevant) and 1 (highly relevant)
    */

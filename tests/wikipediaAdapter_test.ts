@@ -62,21 +62,21 @@ Deno.test({
       });
 
       assertEquals(result.isOk(), true);
-      
+
       if (result.isOk()) {
         const response = result.value;
-        
+
         assertEquals(response.source, "wikipedia");
         assertEquals(response.results.length, 2);
         assertEquals(response.totalResults, 2);
-        
+
         const firstResult = response.results[0];
         assertEquals(firstResult.title, "Test Article");
         assertEquals(firstResult.url, "https://en.wikipedia.org/wiki/Test_Article");
         assertEquals(firstResult.snippet, "This is a test article snippet");
         assertEquals(firstResult.sourceType, "encyclopedia");
         assertExists(firstResult.published);
-        
+
         // Check HTML tags were removed from snippet
         assertEquals(firstResult.snippet.includes("<span>"), false);
       }
@@ -99,11 +99,14 @@ Deno.test({
       });
 
       assertEquals(result.isErr(), true);
-      
+
       if (result.isErr()) {
         const error = result.error;
         assertEquals(error.type, "network");
-        assertEquals((error as { type: string; message: string }).message.includes("Wikipedia API error"), true);
+        assertEquals(
+          (error as { type: string; message: string }).message.includes("Wikipedia API error"),
+          true,
+        );
       }
     } finally {
       restoreFetch();
@@ -115,7 +118,7 @@ Deno.test({
   name: "WikipediaAdapter - language parameter",
   fn: async () => {
     // This test verifies the adapter uses the correct language parameter
-    
+
     // We'll mock fetch and capture the URL that was used
     let capturedUrl = "";
     globalThis.fetch = ((input: RequestInfo | URL) => {
@@ -123,13 +126,14 @@ Deno.test({
       return Promise.resolve({
         ok: true,
         status: 200,
-        json: () => Promise.resolve({
-          batchcomplete: "",
-          query: {
-            searchinfo: { totalhits: 0 },
-            search: [],
-          },
-        }),
+        json: () =>
+          Promise.resolve({
+            batchcomplete: "",
+            query: {
+              searchinfo: { totalhits: 0 },
+              search: [],
+            },
+          }),
       } as Response);
     }) as typeof fetch;
 
@@ -138,17 +142,17 @@ Deno.test({
       const defaultAdapter = new WikipediaAdapter();
       await defaultAdapter.search({ q: "test", maxResults: 5 });
       assertEquals(capturedUrl.includes("https://en.wikipedia.org"), true);
-      
+
       // Test with custom language (ja)
       const japaneseAdapter = new WikipediaAdapter(undefined, "ja");
       await japaneseAdapter.search({ q: "テスト", maxResults: 5 });
       assertEquals(capturedUrl.includes("https://ja.wikipedia.org"), true);
-      
+
       // Test with language override in query params
-      await defaultAdapter.search({ 
-        q: "test", 
+      await defaultAdapter.search({
+        q: "test",
         maxResults: 5,
-        language: "fr" 
+        language: "fr",
       });
       assertEquals(capturedUrl.includes("https://fr.wikipedia.org"), true);
     } finally {
@@ -161,21 +165,21 @@ Deno.test({
   name: "WikipediaAdapter - relevance scores",
   fn: () => {
     const adapter = new WikipediaAdapter();
-    
+
     const academicScore = adapter.getRelevanceScore("research paper", "academic");
     const generalScore = adapter.getRelevanceScore("general information", "general");
     const technicalScore = adapter.getRelevanceScore("technical topic", "technical");
     const programmingScore = adapter.getRelevanceScore("javascript function", "programming");
-    
+
     // Wikipedia should score highest for academic content
     assertEquals(academicScore, 0.9);
     assertEquals(generalScore, 0.8);
     assertEquals(technicalScore, 0.75);
     assertEquals(programmingScore, 0.5);
-    
+
     // All scores should be between 0 and 1
     const scores = [academicScore, generalScore, technicalScore, programmingScore];
-    scores.forEach(score => {
+    scores.forEach((score) => {
       assertEquals(score >= 0 && score <= 1, true);
     });
   },

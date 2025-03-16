@@ -47,19 +47,19 @@ Deno.test({
       });
 
       assertEquals(result.isOk(), true);
-      
+
       if (result.isOk()) {
         const response = result.value;
-        
+
         assertEquals(response.source, "tavily");
         assertEquals(response.results.length, 2); // Answer + 1 result
         assertEquals(response.totalResults, 2);
-        
+
         const answerResult = response.results[0];
         assertEquals(answerResult.title, "AI Generated Answer");
         assertEquals(answerResult.sourceType, "ai_answer");
         assertEquals(answerResult.relevanceScore, 1.0);
-        
+
         const webResult = response.results[1];
         assertEquals(webResult.title, "Test Article");
         assertEquals(webResult.url, "https://example.com/article");
@@ -86,11 +86,16 @@ Deno.test({
       });
 
       assertEquals(result.isErr(), true);
-      
+
       if (result.isErr()) {
         const error = result.error;
         assertEquals(error.type, "authorization");
-        assertEquals((error as { type: string; message: string }).message.includes("API Key authentication error"), true);
+        assertEquals(
+          (error as { type: string; message: string }).message.includes(
+            "API Key authentication error",
+          ),
+          true,
+        );
       }
     } finally {
       restoreFetch();
@@ -102,17 +107,17 @@ Deno.test({
   name: "TavilySearchAdapter - relevance scores",
   fn: () => {
     const adapter = new TavilySearchAdapter("test-api-key");
-    
+
     const generalScore = adapter.getRelevanceScore("general query", "general");
     const qaScore = adapter.getRelevanceScore("how to code", "qa");
     const academicScore = adapter.getRelevanceScore("research paper", "academic");
     const web3Score = adapter.getRelevanceScore("blockchain", "web3");
-    
+
     assertEquals(generalScore, 0.95);
     assertEquals(qaScore, 0.95);
     assertEquals(academicScore, 0.85);
     assertEquals(web3Score, 0.7);
-    
+
     const validScoreRange = (score: number) => score >= 0 && score <= 1;
     assertEquals(validScoreRange(generalScore), true);
     assertEquals(validScoreRange(qaScore), true);
