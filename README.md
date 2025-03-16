@@ -1,6 +1,7 @@
 # ResearchMCP
 
-A research tool that combines the Model Context Protocol (MCP) and Brave Search to realize research functions equivalent (or aiming to be equivalent) to ChatGPT's DeepResearch.
+A research tool that combines the Model Context Protocol (MCP) and Brave Search to realize research
+functions equivalent (or aiming to be equivalent) to ChatGPT's DeepResearch.
 
 ## Technology Stack
 
@@ -78,7 +79,9 @@ make d-down   # Stop container
 
 ### Known Limitations
 
-- **Language Support**: Brave Search API has limited support for non-Latin characters. Searches in Japanese, Chinese, Korean, and other non-Latin script languages may fail with encoding errors. For best results, use English queries.
+- **Language Support**: Brave Search API has limited support for non-Latin characters. Searches in
+  Japanese, Chinese, Korean, and other non-Latin script languages may fail with encoding errors. For
+  best results, use English queries.
 
 ### Features
 
@@ -121,5 +124,5 @@ graph LR
 ```
 
 The MCP server provides a search tool that can be used by Claude to perform web searches through
-Brave Search API. It implements the core `search` tool functionality along with minimal implementations
-of `resources` and `prompts` capabilities for compatibility.
+Brave Search API. It implements the core `search` tool functionality along with minimal
+implementations of `resources` and `prompts` capabilities for compatibility.

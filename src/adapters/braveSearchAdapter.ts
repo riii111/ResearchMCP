@@ -96,13 +96,13 @@ export class BraveSearchAdapter implements SearchAdapter {
           } catch (e) {
             // Ignore error reading response body
           }
-          
+
           return err({
-            type: "invalidQuery", 
+            type: "invalidQuery",
             issues: ["API rejected the query format. Try simplifying your search."],
           });
         }
-        
+
         if (response.status === 429) {
           const retryAfter = response.headers.get("retry-after");
           return err({
@@ -140,15 +140,17 @@ export class BraveSearchAdapter implements SearchAdapter {
       // Japanese, Chinese, Korean and other non-Latin script languages may fail
       // with this encoding error. Users should use English queries for best results.
       if (
-        error instanceof Error && 
+        error instanceof Error &&
         error.message.includes("Latin1 range")
       ) {
         return err({
           type: "invalidQuery",
-          issues: ["Query contains characters that cannot be properly encoded. Try using English or Latin script characters."],
+          issues: [
+            "Query contains characters that cannot be properly encoded. Try using English or Latin script characters.",
+          ],
         });
       }
-      
+
       return err({
         type: "network",
         message: error instanceof Error ? error.message : "Unknown error",

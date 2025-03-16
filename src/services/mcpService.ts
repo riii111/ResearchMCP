@@ -83,7 +83,9 @@ export function createMcpServer(searchService: SearchService): McpServer {
           },
           (error) => {
             // Log errors to stderr
-            Deno.stderr.writeSync(new TextEncoder().encode(`Search error: ${JSON.stringify(error)}\n`));
+            Deno.stderr.writeSync(
+              new TextEncoder().encode(`Search error: ${JSON.stringify(error)}\n`),
+            );
             let errorMessage = "";
 
             switch (error.type) {
@@ -111,7 +113,9 @@ export function createMcpServer(searchService: SearchService): McpServer {
         );
       } catch (error) {
         // Log unexpected errors to stderr
-        Deno.stderr.writeSync(new TextEncoder().encode(`Unexpected error in MCP search: ${error}\n`));
+        Deno.stderr.writeSync(
+          new TextEncoder().encode(`Unexpected error in MCP search: ${error}\n`),
+        );
         return {
           content: [
             {
@@ -161,12 +165,14 @@ function formatSearchResults(results: ReadonlyArray<McpResult>): string {
 export async function startMcpStdioServer(server: McpServer): Promise<void> {
   try {
     // Log server startup info to stderr
-    Deno.stderr.writeSync(new TextEncoder().encode("Starting MCP server with stdio transport...\n"));
+    Deno.stderr.writeSync(
+      new TextEncoder().encode("Starting MCP server with stdio transport...\n"),
+    );
     const transport = new StdioServerTransport();
-    
+
     // Connect to transport - all JSON-RPC messages will use stdout
     await server.connect(transport);
-    
+
     Deno.stderr.writeSync(new TextEncoder().encode("MCP server connected via stdio transport\n"));
   } catch (error) {
     Deno.stderr.writeSync(new TextEncoder().encode(`Failed to start MCP server: ${error}\n`));

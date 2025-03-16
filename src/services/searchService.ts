@@ -54,8 +54,9 @@ export class SearchService {
           case "invalidQuery":
             message = `Invalid query: ${error.issues.join(", ")}`;
             // Provide more user-friendly message for Latin1 encoding errors
-            if (error.issues.some(issue => issue.includes("cannot be properly encoded"))) {
-              message = "The search query contains characters that cannot be processed. Brave Search API has limited support for non-Latin characters (like Japanese, Chinese, or Korean). Please try searching in English instead.";
+            if (error.issues.some((issue) => issue.includes("cannot be properly encoded"))) {
+              message =
+                "The search query contains characters that cannot be processed. Brave Search API has limited support for non-Latin characters (like Japanese, Chinese, or Korean). Please try searching in English instead.";
             }
             break;
           case "authorization":
