@@ -1,7 +1,6 @@
 # ResearchMCP
 
-A research tool that combines Model Context Protocol (MCP) and Brave Search to achieve research
-functionality equivalent to ChatGPT's DeepResearch.
+A research tool that combines the Model Context Protocol (MCP) and Brave Search to realize research functions equivalent (or aiming to be equivalent) to ChatGPT's DeepResearch.
 
 ## Technology Stack
 
