@@ -163,8 +163,8 @@ Brave Search.
 ### Notes on MCP Implementation
 
 - The MCP server implements the core `search` tool functionality
-- The server does not implement optional capabilities like `resources/list` and `prompts/list`
-- Some "Method not found" errors in logs are expected and do not affect functionality
+- Minimal implementations of `resources` and `prompts` capabilities are included for compatibility
+- The server uses the Model Context Protocol (MCP) SDK for standard-compliant implementation
 
 ## System Architecture
 

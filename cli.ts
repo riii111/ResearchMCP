@@ -31,6 +31,10 @@ try {
   const mcpServer = createMcpServer(searchService);
 
   console.error("Starting ResearchMCP server...");
+  console.error("Server capabilities:");
+  console.error("- search tool: enabled");
+  console.error("- resources: minimal implementation");
+  console.error("- prompts: minimal implementation");
   await startMcpStdioServer(mcpServer);
 } catch (error) {
   console.error(`Fatal error: ${error}`);
