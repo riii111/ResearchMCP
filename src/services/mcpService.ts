@@ -38,7 +38,7 @@ export function createMcpServer(searchService: SearchService): McpServer {
   server.resource(
     "empty-resource",
     "empty://resource",
-    async () => ({
+    () => ({
       contents: [],
     }),
   );

@@ -1,6 +1,6 @@
 import { err, ok, Result } from "neverthrow";
 import { SearchService } from "./searchService.ts";
-import { ClaudeAdapter, ClaudeMessage } from "../adapters/claudeAdapter.ts";
+import { ClaudeAdapter, ClaudeMessage } from "../adapters/claude/claudeAdapter.ts";
 import { McpError, McpRequest, McpResult } from "../models/mcp.ts";
 import { ClaudeResponseType } from "../models/claude.ts";
 import { getErrorSafe, getValueSafe } from "../utils/resultUtils.ts";

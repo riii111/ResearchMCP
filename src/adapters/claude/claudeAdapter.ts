@@ -1,5 +1,5 @@
 import { err, ok, Result } from "neverthrow";
-import { getErrorSafe } from "../utils/resultUtils.ts";
+import { getErrorSafe } from "../../utils/resultUtils.ts";
 
 export interface ClaudeMessage {
   role: "user" | "assistant";
@@ -124,7 +124,7 @@ export class AnthropicClaudeAdapter implements ClaudeAdapter {
       if (typedError.type === "rate_limit") {
         // Use either the server-specified retry time or calculate backoff
         const retryAfter = typedError.retryAfter || this.calculateBackoff(attempt);
-        console.log(
+        console.error(
           `Rate limited. Retrying in ${retryAfter}ms (attempt ${attempt}/${MAX_RETRY_ATTEMPTS})`,
         );
 

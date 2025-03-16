@@ -1,11 +1,14 @@
 import { err, ok, Result } from "neverthrow";
-import { CacheAdapter, CacheError } from "./searchAdapter.ts";
+import { CacheAdapter, CacheError } from "./cacheAdapter.ts";
 
 interface CacheEntry<T> {
   value: T;
   expireAt: number;
 }
 
+/**
+ * In-memory implementation of the cache adapter
+ */
 export class MemoryCacheAdapter implements CacheAdapter {
   private storage = new Map<string, CacheEntry<unknown>>();
 
