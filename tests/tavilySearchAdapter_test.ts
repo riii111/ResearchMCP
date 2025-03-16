@@ -90,7 +90,7 @@ Deno.test({
       if (result.isErr()) {
         const error = result.error;
         assertEquals(error.type, "authorization");
-        assertEquals(error.message.includes("API Key authentication error"), true);
+        assertEquals((error as { type: string; message: string }).message.includes("API Key authentication error"), true);
       }
     } finally {
       restoreFetch();

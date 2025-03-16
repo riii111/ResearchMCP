@@ -103,7 +103,7 @@ Deno.test({
       if (result.isErr()) {
         const error = result.error;
         assertEquals(error.type, "network");
-        assertEquals(error.message.includes("Wikipedia API error"), true);
+        assertEquals((error as { type: string; message: string }).message.includes("Wikipedia API error"), true);
       }
     } finally {
       restoreFetch();
@@ -118,8 +118,8 @@ Deno.test({
     
     // We'll mock fetch and capture the URL that was used
     let capturedUrl = "";
-    globalThis.fetch = (url: string | URL) => {
-      capturedUrl = url.toString();
+    globalThis.fetch = ((input: RequestInfo | URL) => {
+      capturedUrl = input.toString();
       return Promise.resolve({
         ok: true,
         status: 200,
@@ -131,7 +131,7 @@ Deno.test({
           },
         }),
       } as Response);
-    };
+    }) as typeof fetch;
 
     try {
       // Test with default language (en)
