@@ -2,35 +2,31 @@
 import { assertEquals, assertExists } from "https://deno.land/std@0.211.0/assert/mod.ts";
 import { ok, Result } from "neverthrow";
 import { SearchService } from "../src/services/searchService.ts";
+import { RoutingService } from "../src/services/routingService.ts";
 import { QueryParams, SearchError, SearchResponse, SearchResult } from "../src/models/search.ts";
 import { QueryCategory } from "../src/models/routing.ts";
+import { QueryClassifierService } from "../src/services/queryClassifierService.ts";
 
-// MockRoutingService implements the minimum required interface for testing
-// Create a mock routing service that implements required RoutingService interface
-class MockRoutingService {
-  // Mock implementation of required properties and methods
-  queryClassifier = {};
-
-  constructor(private readonly mockResults: Result<SearchResponse, SearchError>) {}
-
-  routeAndSearch(_params: QueryParams): Promise<Result<SearchResponse, SearchError>> {
-    return Promise.resolve(this.mockResults);
-  }
-
-  multiSearch(_params: QueryParams): Promise<Result<SearchResponse, SearchError>> {
-    return Promise.resolve(this.mockResults);
-  }
-
-  classifyQuery(_query: string): Result<QueryCategory, unknown> {
+class MockQueryClassifier extends QueryClassifierService {
+  override classifyQuery(_query: string): Result<QueryCategory, Error> {
     return ok("general" as QueryCategory);
   }
+}
 
-  deduplicateResults(results: SearchResult[]): SearchResult[] {
-    return results;
+class MockRoutingService extends RoutingService {
+  private mockResults: Result<SearchResponse, SearchError>;
+
+  constructor(results: Result<SearchResponse, SearchError>) {
+    super(new MockQueryClassifier());
+    this.mockResults = results;
   }
 
-  sortByRelevance(results: SearchResult[]): SearchResult[] {
-    return results;
+  override routeAndSearch(_params: QueryParams): Promise<Result<SearchResponse, SearchError>> {
+    return Promise.resolve(this.mockResults);
+  }
+
+  override multiSearch(_params: QueryParams): Promise<Result<SearchResponse, SearchError>> {
+    return Promise.resolve(this.mockResults);
   }
 }
 

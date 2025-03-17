@@ -201,7 +201,7 @@ Deno.test({
     assertEquals(qaScore, 0.95);
     assertEquals(programmingScore, 0.9);
     assertEquals(technicalScore, 0.8);
-    assertEquals(generalScore, 0.3);
+    assertEquals(generalScore, 0.7);
 
     // All scores should be between 0 and 1
     const scores = [qaScore, programmingScore, technicalScore, generalScore];

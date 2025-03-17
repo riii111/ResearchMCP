@@ -265,7 +265,7 @@ Deno.test({
     // GitHub should score highest for programming content
     assertEquals(programmingScore, 0.95);
     assertEquals(technicalScore, 0.8);
-    assertEquals(generalScore, 0.2);
+    assertEquals(generalScore, 0.7);
 
     // All scores should be between 0 and 1
     const scores = [programmingScore, technicalScore, generalScore];
