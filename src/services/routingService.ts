@@ -27,7 +27,6 @@ export class RoutingService {
       return await adapterResult._unsafeUnwrap().search(params);
     }
 
-    // Use specified category or classify the query
     let category: QueryCategory;
     if (params.routing?.category) {
       category = params.routing.category;
@@ -40,8 +39,6 @@ export class RoutingService {
       category = result._unsafeUnwrap();
     }
 
-    // Get adapters for the category
-    // @ts-ignore: category is guaranteed to be defined here
     const adapters = searchAdapterRegistry.getAdaptersForCategory(category, params.q);
     if (adapters.length === 0) {
       return err({
@@ -50,15 +47,12 @@ export class RoutingService {
       });
     }
 
-    // Use parallel search if specified in routing options
     if (params.routing?.parallel) {
       return await this.multiSearch(params, category);
     }
 
-    // Use primary adapter
     const primaryAdapter = adapters[0];
 
-    // Log which adapter is being used (to stderr to avoid affecting JSON-RPC)
     console.error(
       `[INFO] Using search adapter: ${primaryAdapter.id} (${primaryAdapter.name}) for query: "${
         params.q.substring(0, 50)
@@ -81,7 +75,6 @@ export class RoutingService {
       category = result._unsafeUnwrap();
     }
 
-    // Get adapters for the category
     // @ts-ignore: category is guaranteed to be defined here
     const adapters = searchAdapterRegistry.getAdaptersForCategory(category, params.q);
     if (adapters.length === 0) {
@@ -94,7 +87,6 @@ export class RoutingService {
     // Use up to 3 adapters for parallel search
     const selectedAdapters = adapters.slice(0, 3);
 
-    // Log which adapters are being used for parallel search
     console.error(
       `[INFO] Using multiple search adapters for parallel search: ${
         selectedAdapters.map((a) => `${a.id} (${a.name})`).join(", ")
@@ -109,7 +101,6 @@ export class RoutingService {
     const searchPromises = selectedAdapters.map((adapter) => adapter.search(params));
     const searchResults = await Promise.all(searchPromises);
 
-    // Filter successful results
     const successResults = searchResults.filter((result) => result.isOk());
     if (successResults.length === 0) {
       // If all searches failed, return the first error
@@ -124,7 +115,6 @@ export class RoutingService {
       });
     }
 
-    // Extract and merge the results
     const mergedResults: SearchResult[] = [];
     const sources: string[] = [];
     let totalResults = 0;
@@ -135,7 +125,6 @@ export class RoutingService {
         sources.push(response.source);
         totalResults += response.totalResults;
 
-        // Add source information to each result
         const resultsWithSource = response.results.map((r) => ({
           ...r,
           source: response.source,
@@ -145,13 +134,11 @@ export class RoutingService {
       }
     }
 
-    // Deduplicate results by URL
     const uniqueResults = this.deduplicateResults(mergedResults);
 
     // Sort by rank/relevance
     const sortedResults = this.sortByRelevance(uniqueResults);
 
-    // Return as a standard SearchResponse
     return ok({
       query: params,
       results: sortedResults,

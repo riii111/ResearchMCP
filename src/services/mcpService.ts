@@ -21,7 +21,6 @@ export function createMcpServer(searchService: SearchService): McpServer {
   });
 
   // Register an empty prompt to support prompts/list method
-  // @ts-ignore: Type mismatch with MCP SDK interface
   server.prompt(
     "empty-prompt",
     "Empty placeholder prompt for MCP protocol compliance",
@@ -47,7 +46,6 @@ export function createMcpServer(searchService: SearchService): McpServer {
   );
 
   // Register search tool
-  // @ts-ignore: MCP SDK has type definition mismatch with our Zod schema implementation
   server.tool(
     "search",
     "Search the web for information",
