@@ -11,27 +11,22 @@ export class QueryClassifierService {
    * @returns The category of the query
    */
   classifyQuery(query: string): Result<QueryCategory, Error> {
-    if (this.containsKeywords(query, this.web3Keywords)) {
-      return ok("web3");
+    type CategoryDetector = () => QueryCategory | null;
+
+    const detectors: CategoryDetector[] = [
+      () => this.containsKeywords(query, this.web3Keywords) ? "web3" : null,
+      () => this.containsKeywords(query, this.programmingKeywords) ? "programming" : null,
+      () => this.containsKeywords(query, this.technicalKeywords) ? "technical" : null,
+      () => this.containsKeywords(query, this.academicKeywords) ? "academic" : null,
+      () => this.isQuestionStyle(query) ? "qa" : null,
+    ];
+
+    // prioritizing the first match
+    for (const detect of detectors) {
+      const category = detect();
+      if (category) return ok(category);
     }
 
-    if (this.containsKeywords(query, this.programmingKeywords)) {
-      return ok("programming");
-    }
-
-    if (this.containsKeywords(query, this.technicalKeywords)) {
-      return ok("technical");
-    }
-
-    if (this.containsKeywords(query, this.academicKeywords)) {
-      return ok("academic");
-    }
-
-    if (this.isQuestionStyle(query)) {
-      return ok("qa");
-    }
-
-    // Default category is general search
     return ok("general");
   }
 
