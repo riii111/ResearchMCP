@@ -57,7 +57,6 @@ export function createMcpServer(searchService: SearchService): McpServer {
       language: z.string().min(2).max(5).optional(),
       freshness: z.enum(["day", "week", "month"]).optional(),
       parallel: z.boolean().optional(),
-      adapter: z.string().optional(),
     },
     async (params, _extra) => {
       try {
