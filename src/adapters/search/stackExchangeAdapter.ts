@@ -90,6 +90,9 @@ export class StackExchangeAdapter implements SearchAdapter {
       "qa": 0.95,
       "programming": 0.9,
       "technical": 0.8,
+      "general": 0.7,
+      "web3": 0.7,
+      "academic": 0.7,
     };
 
     return categoryScores[category] ?? 0.3;

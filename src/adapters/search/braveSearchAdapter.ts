@@ -258,22 +258,16 @@ export class BraveSearchAdapter implements SearchAdapter {
     const MS_PER_MONTH = 30 * MS_PER_DAY;
     const MS_PER_YEAR = 365 * MS_PER_DAY;
 
-    switch (unit.toLowerCase()) {
-      case "minute":
-        return numValue * MS_PER_MINUTE;
-      case "hour":
-        return numValue * MS_PER_HOUR;
-      case "day":
-        return numValue * MS_PER_DAY;
-      case "week":
-        return numValue * MS_PER_WEEK;
-      case "month":
-        return numValue * MS_PER_MONTH;
-      case "year":
-        return numValue * MS_PER_YEAR;
-      default:
-        return 0;
-    }
+    const timeUnitMap: Record<string, number> = {
+      "minute": MS_PER_MINUTE,
+      "hour": MS_PER_HOUR,
+      "day": MS_PER_DAY,
+      "week": MS_PER_WEEK,
+      "month": MS_PER_MONTH,
+      "year": MS_PER_YEAR,
+    };
+
+    return numValue * (timeUnitMap[unit.toLowerCase()] || 0);
   }
 }
 
