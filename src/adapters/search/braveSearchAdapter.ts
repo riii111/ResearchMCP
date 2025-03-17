@@ -74,15 +74,16 @@ export class BraveSearchAdapter implements SearchAdapter {
   }
 
   getRelevanceScore(_query: string, category: QueryCategory): number {
-    if (category === "general") {
-      return 0.9;
-    }
+    const categoryScores: Record<Partial<QueryCategory>, number> = {
+      "general": 0.9,
+      "programming": 0.8,
+      "web3": 0.7,
+      "technical": 0.7,
+      "academic": 0.7,
+      "qa": 0.7,
+    };
 
-    if (category === "programming") {
-      return 0.8;
-    }
-
-    return 0.7;
+    return categoryScores[category] ?? 0.7; // Default score 0.7
   }
 
   private async executeSearch(query: QueryParams): Promise<Result<SearchResponse, SearchError>> {

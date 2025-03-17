@@ -70,27 +70,16 @@ export class TavilySearchAdapter implements SearchAdapter {
   }
 
   getRelevanceScore(_query: string, category: QueryCategory): number {
-    if (category === "general") {
-      return 0.95;
-    }
+    const categoryScores: Record<Partial<QueryCategory>, number> = {
+      "general": 0.95,
+      "qa": 0.95,
+      "academic": 0.85,
+      "technical": 0.85,
+      "programming": 0.8,
+      "web3": 0.7,
+    };
 
-    if (category === "qa") {
-      return 0.95;
-    }
-
-    if (category === "academic" || category === "technical") {
-      return 0.85;
-    }
-
-    if (category === "programming") {
-      return 0.8;
-    }
-
-    if (category === "web3") {
-      return 0.7;
-    }
-
-    return 0.7;
+    return categoryScores[category] ?? 0.7;
   }
 
   /**

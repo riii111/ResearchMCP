@@ -96,15 +96,16 @@ export class GitHubAdapter implements SearchAdapter {
   }
 
   getRelevanceScore(_query: string, category: QueryCategory): number {
-    if (category === "programming") {
-      return 0.95;
-    }
+    const categoryScores: Record<Partial<QueryCategory>, number> = {
+      "programming": 0.95,
+      "technical": 0.8,
+      "general": 0.7,
+      "web3": 0.7,
+      "academic": 0.7,
+      "qa": 0.7,
+    };
 
-    if (category === "technical") {
-      return 0.8;
-    }
-
-    return 0.2;
+    return categoryScores[category] ?? 0.2;
   }
 
   private determineSearchType(query: string): GitHubSearchType {

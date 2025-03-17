@@ -68,31 +68,16 @@ export class WikipediaAdapter implements SearchAdapter {
   }
 
   getRelevanceScore(_query: string, category: QueryCategory): number {
-    if (category === "academic") {
-      return 0.9;
-    }
+    const categoryScores: Record<QueryCategory, number> = {
+      "academic": 0.9,
+      "general": 0.8,
+      "technical": 0.75,
+      "programming": 0.5,
+      "web3": 0.5,
+      "qa": 0.4,
+    };
 
-    if (category === "general") {
-      return 0.8;
-    }
-
-    if (category === "technical") {
-      return 0.75;
-    }
-
-    if (category === "programming") {
-      return 0.5;
-    }
-
-    if (category === "web3") {
-      return 0.5;
-    }
-
-    if (category === "qa") {
-      return 0.4;
-    }
-
-    return 0.4;
+    return categoryScores[category] ?? 0.4; // Default score 0.4
   }
 
   private async executeSearch(params: QueryParams): Promise<Result<SearchResponse, SearchError>> {

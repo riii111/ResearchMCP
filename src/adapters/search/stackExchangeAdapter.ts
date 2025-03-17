@@ -86,19 +86,13 @@ export class StackExchangeAdapter implements SearchAdapter {
   }
 
   getRelevanceScore(_query: string, category: QueryCategory): number {
-    if (category === "qa") {
-      return 0.95;
-    }
+    const categoryScores: Record<Partial<QueryCategory>, number> = {
+      "qa": 0.95,
+      "programming": 0.9,
+      "technical": 0.8,
+    };
 
-    if (category === "programming") {
-      return 0.9;
-    }
-
-    if (category === "technical") {
-      return 0.8;
-    }
-
-    return 0.3;
+    return categoryScores[category] ?? 0.3;
   }
 
   private async executeSearch(
