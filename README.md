@@ -20,6 +20,7 @@ functions equivalent (or aiming to be equivalent) to ChatGPT's DeepResearch.
    - `BRAVE_API_KEY`: Brave Search API key
    - `CLAUDE_API_KEY`: Claude API key (optional)
 4. Run the application:
+
    ```
    make dev  # HTTP server
    make mcp  # MCP server for Claude Desktop
@@ -30,6 +31,7 @@ functions equivalent (or aiming to be equivalent) to ChatGPT's DeepResearch.
 1. Install Docker and Docker Compose
 2. Set environment variables in a `.env` file
 3. Build and run the container:
+
    ```
    make d-build
    make d-up
@@ -68,7 +70,8 @@ make d-down   # Stop container
          "args": [],
          "transport": "stdio",
          "env": {
-           "BRAVE_API_KEY": "your_brave_api_key_here"
+           "BRAVE_API_KEY": "your_brave_api_key_here",
+           "TAVILY_API_KEY": "your_tavily_api_key_here"
          }
        }
      }

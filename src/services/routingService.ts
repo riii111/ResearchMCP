@@ -82,22 +82,24 @@ export class RoutingService {
       encoder.encode(
         `${logHeader} Query category: ${category}, Query: "${params.q.substring(0, 50)}${
           params.q.length > 50 ? "..." : ""
-        }"\n`
-      )
+        }"\n`,
+      ),
     );
     Deno.stderr.writeSync(
       encoder.encode(
         `${logHeader} Available adapters: ${
-          adapters.map((a) => `${a.id} (${a.name}, score=${a.getRelevanceScore(params.q, category).toFixed(2)})`).join(", ")
-        }\n`
-      )
+          adapters.map((a) =>
+            `${a.id} (${a.name}, score=${a.getRelevanceScore(params.q, category).toFixed(2)})`
+          ).join(", ")
+        }\n`,
+      ),
     );
     Deno.stderr.writeSync(
       encoder.encode(
         `${logHeader} Selected adapters for parallel search: ${
           selectedAdapters.map((a) => `${a.id} (${a.name})`).join(", ")
-        }\n`
-      )
+        }\n`,
+      ),
     );
     // Old log output removed (replaced with more detailed logging above)
 

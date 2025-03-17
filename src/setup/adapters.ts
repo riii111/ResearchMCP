@@ -41,7 +41,7 @@ export function initializeAdapters(apiKeys: ApiKeys): AdapterContainer {
   }
 
   registerWikipediaAdapter(container.cache);
-  console.log("Registered WikipediaAdapter");
+  log("Registered WikipediaAdapter");
 
   if (apiKeys.github) {
     registerGitHubAdapter(apiKeys.github, container.cache);

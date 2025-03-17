@@ -25,7 +25,7 @@ const logToStderr = (message: string) => {
 try {
   // Initialize all available adapters
   initializeAdapters(apiKeys);
-  
+
   const queryClassifier = new QueryClassifierService();
   const routingService = new RoutingService(queryClassifier);
   const searchService = new SearchService(routingService);

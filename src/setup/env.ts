@@ -17,7 +17,9 @@ export function loadApiKeys(): ApiKeys {
   const braveApiKey = Deno.env.get("BRAVE_API_KEY");
 
   if (!braveApiKey) {
-    Deno.stderr.writeSync(new TextEncoder().encode("Environment variable BRAVE_API_KEY is not set\n"));
+    Deno.stderr.writeSync(
+      new TextEncoder().encode("Environment variable BRAVE_API_KEY is not set\n"),
+    );
     Deno.exit(1);
   }
 
