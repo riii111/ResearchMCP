@@ -10,7 +10,6 @@ export interface McpOptions {
   readonly language?: string;
   readonly freshness?: "day" | "week" | "month";
   readonly parallel?: boolean;
-  readonly adapter?: string;
 }
 
 export type McpResponse = McpSuccessResponse | McpErrorResponse;

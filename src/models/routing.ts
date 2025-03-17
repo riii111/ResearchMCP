@@ -8,7 +8,6 @@ export type QueryCategory = "general" | "programming" | "web3" | "academic" | "t
  */
 export interface RoutingOptions {
   readonly category?: QueryCategory;
-  readonly forceAdapter?: string;
   readonly parallel?: boolean;
   readonly mergeResults?: boolean;
 }

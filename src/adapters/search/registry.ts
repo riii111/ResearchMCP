@@ -20,7 +20,9 @@ export class SearchAdapterRegistry {
     return ok(adapter);
   }
 
-  // Get and sort adapters based on relevance for the query
+  /**
+   * Get and sort adapters based on relevance for the query category
+   */
   getAdaptersForCategory(category: QueryCategory, query: string): SearchAdapter[] {
     const candidates = Array.from(this.adapters.values())
       .filter((adapter) => adapter.supportedCategories.includes(category))

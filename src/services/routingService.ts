@@ -13,20 +13,6 @@ export class RoutingService {
   ) {}
 
   async routeAndSearch(params: QueryParams): Promise<Result<SearchResponse, SearchError>> {
-    // Use forced adapter if specified in routing options
-    if (params.routing?.forceAdapter) {
-      const adapterResult = searchAdapterRegistry.getAdapter(params.routing.forceAdapter);
-      if (adapterResult.isErr()) {
-        return err({
-          type: "no_adapter_available",
-          message: `Adapter ${params.routing.forceAdapter} not found`,
-        });
-      }
-
-      // @ts-ignore: We know this is safe since we checked isErr()
-      return await adapterResult._unsafeUnwrap().search(params);
-    }
-
     let category: QueryCategory;
     if (params.routing?.category) {
       category = params.routing.category;

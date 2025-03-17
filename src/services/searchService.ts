@@ -31,7 +31,6 @@ export class SearchService {
 
     const routingOptions: RoutingOptions = {
       parallel: request.options?.parallel === true,
-      forceAdapter: request.options?.adapter,
     };
 
     const queryParams: QueryParams = {

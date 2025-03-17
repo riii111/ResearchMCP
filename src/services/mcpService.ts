@@ -73,7 +73,6 @@ export function createMcpServer(searchService: SearchService): McpServer {
             language: params.language,
             freshness: params.freshness,
             parallel: params.parallel,
-            adapter: params.adapter,
           },
         });
 
