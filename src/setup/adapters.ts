@@ -45,9 +45,9 @@ export function initializeAdapters(apiKeys: ApiKeys): AdapterContainer {
 
   if (apiKeys.github) {
     registerGitHubAdapter(apiKeys.github, container.cache);
-    console.log("Registered GitHubAdapter");
+    log("Registered GitHubAdapter");
   } else {
-    console.log("GitHub API integration disabled (no API token)");
+    log("GitHub API integration disabled (no API token)");
   }
 
   registerStackExchangeAdapter(apiKeys.stackExchange, container.cache);
