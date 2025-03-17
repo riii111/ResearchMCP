@@ -10,7 +10,6 @@ declare namespace DenoCustom {
   }
 }
 
-// Hono declarations
 declare module "hono" {
   import type { Context } from "npm:hono@4.1.2";
 
@@ -48,7 +47,6 @@ declare module "hono/secure-headers" {
   export function secureHeaders(): (ctx: Context, next: () => Promise<void>) => Promise<void>;
 }
 
-// Neverthrow declarations
 declare module "neverthrow" {
   export function ok<T, E>(value: T): Result<T, E>;
   export function err<T, E>(error: E): Result<T, E>;
@@ -88,7 +86,6 @@ declare module "neverthrow" {
   }
 }
 
-// Zod declarations
 declare module "zod" {
   export interface ZodError {
     format(): Record<string, unknown>;

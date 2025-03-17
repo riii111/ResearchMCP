@@ -36,7 +36,6 @@ export function createMcpServer(searchService: SearchService): McpServer {
     }),
   );
 
-  // Register an empty resource to support resources/list method
   server.resource(
     "empty-resource",
     "empty://resource",
@@ -45,11 +44,9 @@ export function createMcpServer(searchService: SearchService): McpServer {
     }),
   );
 
-  // Register search tool
   server.tool(
     "search",
     "Search the web for information",
-    // @ts-ignore Types between MCP SDK and Zod are not aligned correctly
     z.object({
       query: z.string().min(1).max(200),
       context: z.array(z.string()).optional(),
@@ -61,7 +58,6 @@ export function createMcpServer(searchService: SearchService): McpServer {
     }).shape,
     async (params, _extra) => {
       try {
-        // Logging to stderr to avoid interfering with stdout JSON-RPC messages
         Deno.stderr.writeSync(new TextEncoder().encode(`MCP search request: ${params.query}\n`));
 
         const searchResult = await searchService.searchMcp({
@@ -88,7 +84,6 @@ export function createMcpServer(searchService: SearchService): McpServer {
             };
           },
           (error) => {
-            // Log errors to stderr
             Deno.stderr.writeSync(
               new TextEncoder().encode(`Search error: ${JSON.stringify(error)}\n`),
             );
@@ -118,7 +113,6 @@ export function createMcpServer(searchService: SearchService): McpServer {
           },
         );
       } catch (error) {
-        // Log unexpected errors to stderr
         Deno.stderr.writeSync(
           new TextEncoder().encode(`Unexpected error in MCP search: ${error}\n`),
         );

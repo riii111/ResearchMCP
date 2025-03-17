@@ -15,7 +15,6 @@ const researchRequestSchema = z.object({
   }).optional(),
 });
 
-// Define response types
 export interface ResearchSuccessResponse {
   status: "success";
   result: {
@@ -76,7 +75,6 @@ export function createResearchRouter(researchService: ResearchService): Hono {
           return c.json({ status: "error", message: "Unknown error" }, 500);
         }
 
-        // Type assertion to ensure error is properly typed
         const typedError = error as { type: string; message: string };
         const status = typedError.type === "validation" ? 400 : 500;
         const errorResponse: ResearchErrorResponse = {

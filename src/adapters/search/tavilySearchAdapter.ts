@@ -184,7 +184,7 @@ export class TavilySearchAdapter implements SearchAdapter {
       if (result.content.endsWith("...") && result.raw_content) {
         snippet = result.raw_content;
       }
-      
+
       return {
         id: btoa(result.url),
         title: result.title,
