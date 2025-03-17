@@ -14,7 +14,7 @@ export class QueryClassifierService {
    * - academic: Tavily (AI-enhanced), BraveSearch, Wikipedia
    * - qa: Tavily (primary, AI-optimized), StackExchange, BraveSearch
    * - general: Tavily (primary), BraveSearch, Wikipedia
-   * 
+   *
    * @param query The search query to classify
    * @returns The category of the query
    */

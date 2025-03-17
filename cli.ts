@@ -27,7 +27,7 @@ try {
   const cacheAdapter = new MemoryCacheAdapter();
   registerBraveSearchAdapter(braveApiKey, cacheAdapter);
   console.error("Registered BraveSearchAdapter");
-  
+
   const queryClassifier = new QueryClassifierService();
   const routingService = new RoutingService(queryClassifier);
   const searchService = new SearchService(routingService);

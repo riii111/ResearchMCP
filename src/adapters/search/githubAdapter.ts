@@ -1,4 +1,4 @@
-import { err, ok, Ok, Result } from "neverthrow";
+import { err, Ok, ok, Result } from "neverthrow";
 import { QueryParams, SearchError, SearchResponse, SearchResult } from "../../models/search.ts";
 import { CacheAdapter } from "../cache/cacheAdapter.ts";
 import { createSearchCacheKey, SearchAdapter } from "./searchAdapter.ts";
@@ -150,7 +150,9 @@ export class GitHubAdapter implements SearchAdapter {
           return err(repoResult.error);
         }
 
-        const repoData = (repoResult as Ok<{ results: SearchResult[]; totalCount: number }, SearchError>)._unsafeUnwrap();
+        const repoData =
+          (repoResult as Ok<{ results: SearchResult[]; totalCount: number }, SearchError>)
+            ._unsafeUnwrap();
         results = repoData.results;
         totalCount = repoData.totalCount;
       } else {
@@ -159,7 +161,9 @@ export class GitHubAdapter implements SearchAdapter {
           return err(codeResult.error);
         }
 
-        const codeData = (codeResult as Ok<{ results: SearchResult[]; totalCount: number }, SearchError>)._unsafeUnwrap();
+        const codeData =
+          (codeResult as Ok<{ results: SearchResult[]; totalCount: number }, SearchError>)
+            ._unsafeUnwrap();
         results = codeData.results;
         totalCount = codeData.totalCount;
       }
