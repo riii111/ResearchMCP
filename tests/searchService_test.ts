@@ -3,7 +3,7 @@ import { assertEquals, assertExists } from "https://deno.land/std@0.211.0/assert
 import { ok, Result } from "neverthrow";
 import { SearchService } from "../src/services/searchService.ts";
 import { RoutingService } from "../src/services/routingService.ts";
-import { QueryParams, SearchError, SearchResponse, SearchResult } from "../src/models/search.ts";
+import { QueryParams, SearchError, SearchResponse } from "../src/models/search.ts";
 import { QueryCategory } from "../src/models/routing.ts";
 import { QueryClassifierService } from "../src/services/queryClassifierService.ts";
 

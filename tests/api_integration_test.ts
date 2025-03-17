@@ -12,7 +12,7 @@ import { SearchService } from "../src/services/searchService.ts";
 import { ResearchService } from "../src/services/researchService.ts";
 import { createMcpRouter } from "../src/routes/mcp.ts";
 import { createResearchRouter } from "../src/routes/research.ts";
-import { QueryParams, SearchError, SearchResponse, SearchResult } from "../src/models/search.ts";
+import { QueryParams, SearchError, SearchResponse } from "../src/models/search.ts";
 import { QueryCategory } from "../src/models/routing.ts";
 import { McpResponse } from "../src/models/mcp.ts";
 import { RoutingService } from "../src/services/routingService.ts";
