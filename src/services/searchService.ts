@@ -29,7 +29,6 @@ export class SearchService {
       });
     }
 
-    // Extract routing options if provided
     const routingOptions: RoutingOptions = {
       parallel: request.options?.parallel === true,
       forceAdapter: request.options?.adapter,

@@ -57,10 +57,14 @@ export class RoutingService {
 
     // Use primary adapter
     const primaryAdapter = adapters[0];
-    
+
     // Log which adapter is being used (to stderr to avoid affecting JSON-RPC)
-    console.error(`[INFO] Using search adapter: ${primaryAdapter.id} (${primaryAdapter.name}) for query: "${params.q.substring(0, 50)}${params.q.length > 50 ? '...' : ''}"`);
-    
+    console.error(
+      `[INFO] Using search adapter: ${primaryAdapter.id} (${primaryAdapter.name}) for query: "${
+        params.q.substring(0, 50)
+      }${params.q.length > 50 ? "..." : ""}"`,
+    );
+
     return await primaryAdapter.search(params);
   }
 
@@ -68,7 +72,6 @@ export class RoutingService {
     params: QueryParams,
     category?: QueryCategory,
   ): Promise<Result<SearchResponse, SearchError>> {
-    // If category not provided, classify the query
     if (!category) {
       const result = this.classifyQuery(params.q);
       if (result.isErr()) {
@@ -90,10 +93,16 @@ export class RoutingService {
 
     // Use up to 3 adapters for parallel search
     const selectedAdapters = adapters.slice(0, 3);
-    
+
     // Log which adapters are being used for parallel search
-    console.error(`[INFO] Using multiple search adapters for parallel search: ${selectedAdapters.map(a => `${a.id} (${a.name})`).join(', ')}`);
-    console.error(`[INFO] Query: "${params.q.substring(0, 50)}${params.q.length > 50 ? '...' : ''}"`);
+    console.error(
+      `[INFO] Using multiple search adapters for parallel search: ${
+        selectedAdapters.map((a) => `${a.id} (${a.name})`).join(", ")
+      }`,
+    );
+    console.error(
+      `[INFO] Query: "${params.q.substring(0, 50)}${params.q.length > 50 ? "..." : ""}"`,
+    );
 
     // Execute searches in parallel
     const startTime = Date.now();

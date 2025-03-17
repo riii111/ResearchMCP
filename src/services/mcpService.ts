@@ -168,7 +168,6 @@ function formatSearchResults(results: ReadonlyArray<McpResult>): string {
  */
 export async function startMcpStdioServer(server: McpServer): Promise<void> {
   try {
-    // Log server startup info to stderr
     Deno.stderr.writeSync(
       new TextEncoder().encode("Starting MCP server with stdio transport...\n"),
     );

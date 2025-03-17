@@ -11,27 +11,22 @@ export class QueryClassifierService {
    * @returns The category of the query
    */
   classifyQuery(query: string): Result<QueryCategory, Error> {
-    // Web3 related keywords
     if (this.containsKeywords(query, this.web3Keywords)) {
       return ok("web3");
     }
 
-    // Programming and development related
     if (this.containsKeywords(query, this.programmingKeywords)) {
       return ok("programming");
     }
 
-    // Technical and science related
     if (this.containsKeywords(query, this.technicalKeywords)) {
       return ok("technical");
     }
 
-    // Academic and research related
     if (this.containsKeywords(query, this.academicKeywords)) {
       return ok("academic");
     }
 
-    // Question and answer style queries
     if (this.isQuestionStyle(query)) {
       return ok("qa");
     }
@@ -54,12 +49,10 @@ export class QueryClassifierService {
   private isQuestionStyle(query: string): boolean {
     const lowerQuery = query.toLowerCase().trim();
 
-    // Questions starting with question words
     if (/^(what|how|why|when|where|who|which|can|do|does|is|are|will|should)\s/i.test(lowerQuery)) {
       return true;
     }
 
-    // Questions ending with question mark
     if (lowerQuery.endsWith("?")) {
       return true;
     }
@@ -67,7 +60,6 @@ export class QueryClassifierService {
     return false;
   }
 
-  // Keywords for different categories
   private readonly web3Keywords = [
     "blockchain",
     "ethereum",

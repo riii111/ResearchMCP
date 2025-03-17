@@ -48,7 +48,6 @@ export class ResearchService {
       });
     }
 
-    // Extract search data using destructuring
     const { value: searchData } = searchResult;
 
     const successData = isSuccessResponseWithResults(searchData)
@@ -79,7 +78,6 @@ export class ResearchService {
       });
     }
 
-    // Extract the successful result using our helper
     const analysis = getValueSafe(analysisResult);
     if (!analysis) {
       return err({
@@ -88,7 +86,6 @@ export class ResearchService {
       });
     }
 
-    // Ensure analysis is properly typed
     if (!isClaudeResponseType(analysis)) {
       return err({
         type: "analysis_failed",
@@ -96,10 +93,8 @@ export class ResearchService {
       });
     }
 
-    // Analysis is now properly typed as ClaudeResponseType
     const typedAnalysis = analysis as ClaudeResponseType;
 
-    // Return the research result
     return ok({
       query: request.query,
       searchResults: successData.results,

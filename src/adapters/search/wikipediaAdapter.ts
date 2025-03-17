@@ -83,7 +83,6 @@ export class WikipediaAdapter implements SearchAdapter {
   private async executeSearch(params: QueryParams): Promise<Result<SearchResponse, SearchError>> {
     const startTime = Date.now();
 
-    // Construct the query URL with search parameters
     const urlParams = new URLSearchParams({
       action: "query",
       list: "search",
