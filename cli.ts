@@ -7,7 +7,7 @@
  * Available for use from MCP clients such as Claude Desktop.
  */
 
-import { BraveSearchAdapter } from "./src/adapters/search/braveSearchAdapter.ts";
+import { registerBraveSearchAdapter } from "./src/adapters/search/braveSearchAdapter.ts";
 import { MemoryCacheAdapter } from "./src/adapters/cache/memoryCache.ts";
 import { SearchService } from "./src/services/searchService.ts";
 import { RoutingService } from "./src/services/routingService.ts";
@@ -24,10 +24,10 @@ if (!braveApiKey) {
 }
 
 try {
-  // Setup adapters and services
   const cacheAdapter = new MemoryCacheAdapter();
-  // Register the search adapter
-  const _searchAdapter = new BraveSearchAdapter(braveApiKey, cacheAdapter);
+  registerBraveSearchAdapter(braveApiKey, cacheAdapter);
+  console.error("Registered BraveSearchAdapter");
+  
   const queryClassifier = new QueryClassifierService();
   const routingService = new RoutingService(queryClassifier);
   const searchService = new SearchService(routingService);
