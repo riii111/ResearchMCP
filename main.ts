@@ -2,76 +2,28 @@
 import { Hono } from "hono";
 import { logger } from "hono/logger";
 import { secureHeaders } from "hono/secure-headers";
-import { AnthropicClaudeAdapter } from "./src/adapters/claude/claudeAdapter.ts";
-import { MemoryCacheAdapter } from "./src/adapters/cache/memoryCache.ts";
-import { registerBraveSearchAdapter } from "./src/adapters/search/braveSearchAdapter.ts";
-import { registerTavilySearchAdapter } from "./src/adapters/search/tavilySearchAdapter.ts";
-import { registerWikipediaAdapter } from "./src/adapters/search/wikipediaAdapter.ts";
-import { registerGitHubAdapter } from "./src/adapters/search/githubAdapter.ts";
-import { registerStackExchangeAdapter } from "./src/adapters/search/stackExchangeAdapter.ts";
-import { SearchService } from "./src/services/searchService.ts";
-import { ResearchService } from "./src/services/researchService.ts";
+import { getServerPort, loadApiKeys } from "./src/setup/env.ts";
+import { initializeAdapters } from "./src/setup/adapters.ts";
 import { QueryClassifierService } from "./src/services/queryClassifierService.ts";
 import { RoutingService } from "./src/services/routingService.ts";
+import { SearchService } from "./src/services/searchService.ts";
+import { ResearchService } from "./src/services/researchService.ts";
 import { createMcpRouter } from "./src/routes/mcp.ts";
 import { createResearchRouter } from "./src/routes/research.ts";
 
+const apiKeys = loadApiKeys();
+const port = getServerPort();
+
 const app = new Hono();
-const port = parseInt(Deno.env.get("PORT") || "8088");
-
-// API Keys
-const braveApiKey = Deno.env.get("BRAVE_API_KEY");
-const tavilyApiKey = Deno.env.get("TAVILY_API_KEY");
-const githubToken = Deno.env.get("GITHUB_API_TOKEN");
-const stackExchangeKey = Deno.env.get("STACKEXCHANGE_API_KEY");
-const claudeApiKey = Deno.env.get("CLAUDE_API_KEY");
-
-if (!braveApiKey) {
-  console.error("Environment variable BRAVE_API_KEY is not set");
-  Deno.exit(1);
-}
-
 app.use(logger());
 app.use(secureHeaders());
 
-// Setup cache
-const cacheAdapter = new MemoryCacheAdapter();
+const adapters = initializeAdapters(apiKeys);
 
-// Setup search adapters - register with registry
-registerBraveSearchAdapter(braveApiKey, cacheAdapter);
-console.log("Registered BraveSearchAdapter");
-
-if (tavilyApiKey) {
-  registerTavilySearchAdapter(tavilyApiKey, cacheAdapter);
-  console.log("Registered TavilySearchAdapter");
-} else {
-  console.log("Tavily API integration disabled (no API key)");
-}
-
-// Register Wikipedia adapter (no API key required)
-registerWikipediaAdapter(cacheAdapter);
-console.log("Registered WikipediaAdapter");
-
-// Register GitHub adapter if token is available
-if (githubToken) {
-  registerGitHubAdapter(githubToken, cacheAdapter);
-  console.log("Registered GitHubAdapter");
-} else {
-  console.log("GitHub API integration disabled (no API token)");
-}
-
-// Register Stack Exchange adapter (works without API key, but has lower rate limits)
-registerStackExchangeAdapter(stackExchangeKey, cacheAdapter);
-console.log(
-  "Registered StackExchangeAdapter" + (stackExchangeKey ? " with API key" : " without API key"),
-);
-
-// Setup services
 const queryClassifier = new QueryClassifierService();
 const routingService = new RoutingService(queryClassifier);
 const searchService = new SearchService(routingService);
 
-// Setup endpoints
 app.get("/", (c) => {
   return c.json({
     name: "ResearchMCP",
@@ -82,17 +34,11 @@ app.get("/", (c) => {
 
 app.route("/mcp", createMcpRouter(searchService));
 
-// Setup Claude API integration if API key is available
-if (claudeApiKey) {
-  const claudeAdapter = new AnthropicClaudeAdapter(claudeApiKey);
-  const researchService = new ResearchService(searchService, claudeAdapter);
+if (adapters.claude) {
+  const researchService = new ResearchService(searchService, adapters.claude);
   app.route("/research", createResearchRouter(researchService));
-  console.log("Claude API integration enabled");
-} else {
-  console.log("Claude API integration disabled (no API key)");
 }
 
-// Error handlers
 app.notFound((c) => {
   return c.json({ message: "Not Found" }, 404);
 });
