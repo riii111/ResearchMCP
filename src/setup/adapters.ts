@@ -25,14 +25,19 @@ export function initializeAdapters(apiKeys: ApiKeys): AdapterContainer {
     cache: new MemoryCacheAdapter(),
   };
 
+  const encoder = new TextEncoder();
+  const log = (message: string) => {
+    Deno.stderr.writeSync(encoder.encode(message + "\n"));
+  };
+
   registerBraveSearchAdapter(apiKeys.brave, container.cache);
-  console.log("Registered BraveSearchAdapter");
+  log("Registered BraveSearchAdapter");
 
   if (apiKeys.tavily) {
     registerTavilySearchAdapter(apiKeys.tavily, container.cache);
-    console.log("Registered TavilySearchAdapter");
+    log("Registered TavilySearchAdapter");
   } else {
-    console.log("Tavily API integration disabled (no API key)");
+    log("Tavily API integration disabled (no API key)");
   }
 
   registerWikipediaAdapter(container.cache);
@@ -46,17 +51,14 @@ export function initializeAdapters(apiKeys: ApiKeys): AdapterContainer {
   }
 
   registerStackExchangeAdapter(apiKeys.stackExchange, container.cache);
-  console.log(
-    "Registered StackExchangeAdapter" +
-      (apiKeys.stackExchange ? " with API key" : " without API key"),
-  );
+  log("StackExchange API integration temporarily disabled");
 
   // Initialize Claude API adapter (if API key is provided)
   if (apiKeys.claude) {
     container.claude = new AnthropicClaudeAdapter(apiKeys.claude);
-    console.log("Claude API integration enabled");
+    log("Claude API integration enabled");
   } else {
-    console.log("Claude API integration disabled (no API key)");
+    log("Claude API integration disabled (no API key)");
   }
 
   return container;

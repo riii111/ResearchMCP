@@ -75,14 +75,31 @@ export class RoutingService {
     // Use up to 3 adapters for parallel search
     const selectedAdapters = adapters.slice(0, 3);
 
-    console.error(
-      `[INFO] Using multiple search adapters for parallel search: ${
-        selectedAdapters.map((a) => `${a.id} (${a.name})`).join(", ")
-      } (category: ${category})`,
+    const encoder = new TextEncoder();
+    // Using a consistent header to make logs easily searchable
+    const logHeader = "[PARALLEL_SEARCH]";
+    Deno.stderr.writeSync(
+      encoder.encode(
+        `${logHeader} Query category: ${category}, Query: "${params.q.substring(0, 50)}${
+          params.q.length > 50 ? "..." : ""
+        }"\n`
+      )
     );
-    console.error(
-      `[INFO] Query: "${params.q.substring(0, 50)}${params.q.length > 50 ? "..." : ""}"`,
+    Deno.stderr.writeSync(
+      encoder.encode(
+        `${logHeader} Available adapters: ${
+          adapters.map((a) => `${a.id} (${a.name}, score=${a.getRelevanceScore(params.q, category).toFixed(2)})`).join(", ")
+        }\n`
+      )
     );
+    Deno.stderr.writeSync(
+      encoder.encode(
+        `${logHeader} Selected adapters for parallel search: ${
+          selectedAdapters.map((a) => `${a.id} (${a.name})`).join(", ")
+        }\n`
+      )
+    );
+    // Old log output removed (replaced with more detailed logging above)
 
     // Execute searches in parallel
     const startTime = Date.now();

@@ -7,27 +7,25 @@
  * Available for use from MCP clients such as Claude Desktop.
  */
 
-import { registerBraveSearchAdapter } from "./src/adapters/search/braveSearchAdapter.ts";
-import { MemoryCacheAdapter } from "./src/adapters/cache/memoryCache.ts";
+import { loadApiKeys } from "./src/setup/env.ts";
+import { initializeAdapters } from "./src/setup/adapters.ts";
 import { SearchService } from "./src/services/searchService.ts";
 import { RoutingService } from "./src/services/routingService.ts";
 import { createMcpServer, startMcpStdioServer } from "./src/services/mcpService.ts";
 import { QueryClassifierService } from "./src/services/queryClassifierService.ts";
 
-// Check environment variables
-const braveApiKey = Deno.env.get("BRAVE_API_KEY");
+// Load API keys from environment variables
+const apiKeys = loadApiKeys();
 
-if (!braveApiKey) {
-  console.error("Error: BRAVE_API_KEY environment variable is not set");
-  console.error("Please set the BRAVE_API_KEY environment variable and try again");
-  Deno.exit(1);
-}
+const encoder = new TextEncoder();
+const logToStderr = (message: string) => {
+  Deno.stderr.writeSync(encoder.encode(message + "\n"));
+};
 
 try {
-  const cacheAdapter = new MemoryCacheAdapter();
-  registerBraveSearchAdapter(braveApiKey, cacheAdapter);
-  console.error("Registered BraveSearchAdapter");
-
+  // Initialize all available adapters
+  initializeAdapters(apiKeys);
+  
   const queryClassifier = new QueryClassifierService();
   const routingService = new RoutingService(queryClassifier);
   const searchService = new SearchService(routingService);
@@ -35,13 +33,13 @@ try {
   // Create and start MCP server
   const mcpServer = createMcpServer(searchService);
 
-  console.error("Starting ResearchMCP server...");
-  console.error("Server capabilities:");
-  console.error("- search tool: enabled");
-  console.error("- resources: minimal implementation");
-  console.error("- prompts: minimal implementation");
+  logToStderr("Starting ResearchMCP server...");
+  logToStderr("Server capabilities:");
+  logToStderr("- search tool: enabled");
+  logToStderr("- resources: minimal implementation");
+  logToStderr("- prompts: minimal implementation");
   await startMcpStdioServer(mcpServer);
 } catch (error) {
-  console.error(`Fatal error: ${error}`);
+  logToStderr(`Fatal error: ${error}`);
   Deno.exit(1);
 }
