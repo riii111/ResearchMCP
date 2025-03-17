@@ -5,7 +5,7 @@ import { registerWikipediaAdapter } from "../adapters/search/wikipediaAdapter.ts
 import { registerGitHubAdapter } from "../adapters/search/githubAdapter.ts";
 import { registerStackExchangeAdapter } from "../adapters/search/stackExchangeAdapter.ts";
 import { AnthropicClaudeAdapter } from "../adapters/claude/claudeAdapter.ts";
-import type { ApiKeys } from "../config/env.ts";
+import type { ApiKeys } from "./env.ts";
 
 /**
  * Type definition representing the adapter container.
