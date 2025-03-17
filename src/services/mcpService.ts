@@ -49,7 +49,8 @@ export function createMcpServer(searchService: SearchService): McpServer {
   server.tool(
     "search",
     "Search the web for information",
-    {
+    // @ts-ignore Types between MCP SDK and Zod are not aligned correctly
+    z.object({
       query: z.string().min(1).max(200),
       context: z.array(z.string()).optional(),
       maxResults: z.number().int().min(1).max(50).optional(),
@@ -57,7 +58,7 @@ export function createMcpServer(searchService: SearchService): McpServer {
       language: z.string().min(2).max(5).optional(),
       freshness: z.enum(["day", "week", "month"]).optional(),
       parallel: z.boolean().optional(),
-    },
+    }).shape,
     async (params, _extra) => {
       try {
         // Logging to stderr to avoid interfering with stdout JSON-RPC messages
