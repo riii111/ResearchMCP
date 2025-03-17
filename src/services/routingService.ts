@@ -1,4 +1,4 @@
-import { err, ok, Result } from "neverthrow";
+import { err, Ok, ok, Result } from "neverthrow";
 import { searchAdapterRegistry } from "../adapters/search/registry.ts";
 import { QueryClassifierService } from "./queryClassifierService.ts";
 import { QueryParams, SearchError, SearchResponse, SearchResult } from "../models/search.ts";
@@ -21,8 +21,8 @@ export class RoutingService {
       if (result.isErr()) {
         return err(result.error);
       }
-      // @ts-ignore: We know this is safe since we checked isErr()
-      category = result._unsafeUnwrap();
+
+      category = (result as Ok<QueryCategory, SearchError>)._unsafeUnwrap();
     }
 
     const adapters = searchAdapterRegistry.getAdaptersForCategory(category, params.q);
@@ -38,16 +38,18 @@ export class RoutingService {
     }
 
     const primaryAdapter = adapters[0];
-
     console.error(
       `[INFO] Using search adapter: ${primaryAdapter.id} (${primaryAdapter.name}) for query: "${
         params.q.substring(0, 50)
-      }${params.q.length > 50 ? "..." : ""}"`,
+      }${params.q.length > 50 ? "..." : ""}" (category: ${category})`,
     );
 
     return await primaryAdapter.search(params);
   }
 
+  /**
+   * Execute search in parallel with multiple adapters
+   */
   async multiSearch(
     params: QueryParams,
     category?: QueryCategory,
@@ -57,11 +59,11 @@ export class RoutingService {
       if (result.isErr()) {
         return err(result.error);
       }
-      // @ts-ignore: We know this is safe since we checked isErr()
-      category = result._unsafeUnwrap();
+
+      category = (result as Ok<QueryCategory, SearchError>)._unsafeUnwrap();
     }
 
-    // @ts-ignore: category is guaranteed to be defined here
+    // Get adapters for this category
     const adapters = searchAdapterRegistry.getAdaptersForCategory(category, params.q);
     if (adapters.length === 0) {
       return err({
@@ -76,7 +78,7 @@ export class RoutingService {
     console.error(
       `[INFO] Using multiple search adapters for parallel search: ${
         selectedAdapters.map((a) => `${a.id} (${a.name})`).join(", ")
-      }`,
+      } (category: ${category})`,
     );
     console.error(
       `[INFO] Query: "${params.q.substring(0, 50)}${params.q.length > 50 ? "..." : ""}"`,
@@ -144,8 +146,7 @@ export class RoutingService {
       });
     }
 
-    // @ts-ignore: We know this is safe since we checked isErr()
-    return ok(categoryResult._unsafeUnwrap());
+    return ok((categoryResult as Ok<QueryCategory, Error>)._unsafeUnwrap());
   }
 
   private deduplicateResults(results: SearchResult[]): SearchResult[] {

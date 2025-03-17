@@ -1,4 +1,4 @@
-import { err, ok, Result } from "neverthrow";
+import { err, ok, Ok, Result } from "neverthrow";
 import { QueryParams, SearchError, SearchResponse, SearchResult } from "../../models/search.ts";
 import { CacheAdapter } from "../cache/cacheAdapter.ts";
 import { createSearchCacheKey, SearchAdapter } from "./searchAdapter.ts";
@@ -150,9 +150,7 @@ export class GitHubAdapter implements SearchAdapter {
           return err(repoResult.error);
         }
 
-        // Type assertion to help TypeScript understand the narrowing
-        // @ts-ignore: Result narrowing
-        const repoData = repoResult._unsafeUnwrap();
+        const repoData = (repoResult as Ok<{ results: SearchResult[]; totalCount: number }, SearchError>)._unsafeUnwrap();
         results = repoData.results;
         totalCount = repoData.totalCount;
       } else {
@@ -161,9 +159,7 @@ export class GitHubAdapter implements SearchAdapter {
           return err(codeResult.error);
         }
 
-        // Type assertion to help TypeScript understand the narrowing
-        // @ts-ignore: Result narrowing
-        const codeData = codeResult._unsafeUnwrap();
+        const codeData = (codeResult as Ok<{ results: SearchResult[]; totalCount: number }, SearchError>)._unsafeUnwrap();
         results = codeData.results;
         totalCount = codeData.totalCount;
       }
