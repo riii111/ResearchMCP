@@ -21,6 +21,7 @@ interface TavilySearchResult {
   title: string;
   url: string;
   content: string;
+  raw_content?: string;
   score: number;
   published_date?: string;
 }
@@ -92,6 +93,7 @@ export class TavilySearchAdapter implements SearchAdapter {
       max_results: params.maxResults,
       search_depth: "advanced",
       include_answer: true,
+      include_raw_content: true,
     };
 
     try {
@@ -174,17 +176,27 @@ export class TavilySearchAdapter implements SearchAdapter {
     }
 
     // Add the web search results
-    const webResults = tavilyResponse.results.map((result, index) => ({
-      id: btoa(result.url),
-      title: result.title,
-      url: result.url,
-      snippet: result.content,
-      published: result.published_date ? new Date(result.published_date) : undefined,
-      rank: index + 1,
-      source: this.name,
-      sourceType: "web",
-      relevanceScore: result.score,
-    }));
+    const webResults = tavilyResponse.results.map((result, index) => {
+      // Use raw_content only when needed to avoid token bloat
+      // raw_content is not included in final response objects (SearchResult)
+      // so no need to explicitly set it to null after use
+      let snippet = result.content;
+      if (result.content.endsWith("...") && result.raw_content) {
+        snippet = result.raw_content;
+      }
+      
+      return {
+        id: btoa(result.url),
+        title: result.title,
+        url: result.url,
+        snippet,
+        published: result.published_date ? new Date(result.published_date) : undefined,
+        rank: index + 1,
+        source: this.name,
+        sourceType: "web",
+        relevanceScore: result.score,
+      };
+    });
 
     results.push(...webResults);
 
