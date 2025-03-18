@@ -1,0 +1,11 @@
+.git
+.github
+.vscode
+node_modules
+npm-debug.log
+README.md
+*.md
+*.test.ts
+tests/
+docs/
+examples/ 

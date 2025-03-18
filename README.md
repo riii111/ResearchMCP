@@ -22,7 +22,7 @@ DeepResearch.
    - `CLAUDE_API_KEY`: Claude API key (optional)
 4. Run the application:
 
-   ```
+   ```bash
    make dev  # HTTP server
    make mcp  # MCP server for Claude Desktop
    ```
@@ -33,7 +33,7 @@ DeepResearch.
 2. Set environment variables in a `.env` file
 3. Build and run the container:
 
-   ```
+   ```bash
    make d-build
    make d-up
    ```
