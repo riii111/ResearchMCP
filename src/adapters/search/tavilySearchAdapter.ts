@@ -1,4 +1,4 @@
-import { err, ok, Result } from "neverthrow";
+import { err, ok, Result, ResultAsync } from "neverthrow";
 import { QueryParams, SearchError, SearchResponse, SearchResult } from "../../models/search.ts";
 import { CacheAdapter } from "../cache/cacheAdapter.ts";
 import { createSearchCacheKey, SearchAdapter } from "./searchAdapter.ts";
@@ -34,9 +34,6 @@ interface TavilySearchResponse {
 const TAVILY_API_ENDPOINT = "https://api.tavily.com/search";
 const DEFAULT_CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
-/**
- * Adapter for the Tavily Search API
- */
 export class TavilySearchAdapter implements SearchAdapter {
   readonly id = "tavily";
   readonly name = "Tavily Search";
@@ -67,7 +64,7 @@ export class TavilySearchAdapter implements SearchAdapter {
     return this.fetchAndCacheResults(params);
   }
 
-  private fetchAndCacheResults(params: QueryParams): Promise<Result<SearchResponse, SearchError>> {
+  private fetchAndCacheResults(params: QueryParams): ResultAsync<SearchResponse, SearchError> {
     return this.executeSearch(params);
   }
 
@@ -84,7 +81,7 @@ export class TavilySearchAdapter implements SearchAdapter {
     return categoryScores[category] ?? 0.7;
   }
 
-  private async executeSearch(params: QueryParams): Promise<Result<SearchResponse, SearchError>> {
+  private executeSearch(params: QueryParams): ResultAsync<SearchResponse, SearchError> {
     const searchParams: TavilySearchParams = {
       api_key: this.apiKey,
       query: params.q,
@@ -94,6 +91,25 @@ export class TavilySearchAdapter implements SearchAdapter {
       include_raw_content: true,
     };
 
+    return this.fetchTavilyData(searchParams, params)
+      .andThen((tavilyResponse) => {
+        const searchResponse = this.mapTavilyResponseToSearchResponse(
+          tavilyResponse,
+          params,
+        );
+
+        if (this.cache) {
+          this.cacheSearchResults(params, searchResponse);
+        }
+
+        return ok(searchResponse);
+      });
+  }
+
+  private fetchTavilyData(
+    searchParams: TavilySearchParams,
+    _params: QueryParams,
+  ): ResultAsync<TavilySearchResponse, SearchError> {
     const fetchOptions = {
       method: "POST",
       headers: {
@@ -103,78 +119,71 @@ export class TavilySearchAdapter implements SearchAdapter {
       body: JSON.stringify(searchParams),
     };
 
-    try {
-      const response = await fetch(TAVILY_API_ENDPOINT, fetchOptions);
-
-      if (!response.ok) {
-        if (response.status === 429) {
-          return err({
-            type: "rateLimit",
-            message: "Tavily API rate limit exceeded",
-            retryAfterMs: 60000, // Default to 1 minute
-          });
-        }
-
-        if (response.status === 401 || response.status === 403) {
-          return err({
-            type: "authorization",
-            message: `Tavily API Key authentication error: ${response.status}`,
-          });
-        }
-
-        // Try to parse error message from response
-        let errorMessage = `API call error: ${response.status}`;
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.detail || errorData.message || errorMessage;
-        } catch {
-          // Ignore JSON parsing errors
-        }
-
-        return err({
-          type: "network",
-          message: errorMessage,
-        });
-      }
-
-      let tavilyResponse;
-      try {
-        tavilyResponse = await response.json();
-      } catch {
-        return err({
-          type: "network",
-          message: "Failed to parse API response",
-        });
-      }
-
-      const searchResponse = this.mapTavilyResponseToSearchResponse(
-        tavilyResponse as TavilySearchResponse,
-        params,
-      );
-
-      if (this.cache) {
-        const cacheKey = createSearchCacheKey(params, this.id);
-        this.cache.set(cacheKey, searchResponse, DEFAULT_CACHE_TTL_MS)
-          .catch(() => {}); // Ignore cache errors
-      }
-
-      return ok(searchResponse);
-    } catch (error) {
-      return err({
+    return ResultAsync.fromPromise(
+      fetch(TAVILY_API_ENDPOINT, fetchOptions),
+      (e) => ({
         type: "network",
-        message: error instanceof Error ? error.message : "Unknown error",
-      });
-    }
+        message: e instanceof Error ? e.message : "Unknown error",
+      } as SearchError),
+    )
+      .andThen((response) => {
+        if (!response.ok) {
+          if (response.status === 429) {
+            return err<Response, SearchError>({
+              type: "rateLimit",
+              message: "Tavily API rate limit exceeded",
+              retryAfterMs: 60000, // Default to 1 minute
+            });
+          }
+
+          if (response.status === 401 || response.status === 403) {
+            return err<Response, SearchError>({
+              type: "authorization",
+              message: `Tavily API Key authentication error: ${response.status}`,
+            });
+          }
+
+          return this.handleApiError(response);
+        }
+
+        return ok(response);
+      })
+      .andThen((response) =>
+        ResultAsync.fromPromise(
+          response.json() as Promise<TavilySearchResponse>,
+          () => ({
+            type: "network",
+            message: "Failed to parse API response",
+          } as SearchError),
+        )
+      );
   }
 
-  /**
-   * Map Tavily API response to standard search response format
-   */
+  private handleApiError(response: Response): Result<Response, SearchError> {
+    // Attempt to parse error JSON but don't error on parse failure
+    ResultAsync.fromPromise(
+      response.json(),
+      () => ({ detail: "", message: "" }),
+    )
+      .match(
+        (errorData) => {
+          const errorMessage = errorData.detail || errorData.message || `API call error: ${response.status}`;
+          console.error(`API error: ${errorMessage}`);
+        },
+        () => { /* Ignore parse errors */ }
+      );
+    
+    // Return a standard error response regardless
+    return err<Response, SearchError>({
+      type: "network", 
+      message: `API call error: ${response.status}`
+    });
+  }
+
   private mapTavilyResponseToSearchResponse(
     tavilyResponse: TavilySearchResponse,
     params: QueryParams,
   ): SearchResponse {
-    // Add the answer as a special result if available
     const results: SearchResult[] = [];
 
     if (tavilyResponse.answer) {
@@ -190,11 +199,7 @@ export class TavilySearchAdapter implements SearchAdapter {
       });
     }
 
-    // Add the web search results
     const webResults = tavilyResponse.results.map((result, index) => {
-      // Use raw_content only when needed to avoid token bloat
-      // raw_content is not included in final response objects (SearchResult)
-      // so no need to explicitly set it to null after use
       let snippet = result.content;
       if (result.content.endsWith("...") && result.raw_content) {
         snippet = result.raw_content;
@@ -223,11 +228,18 @@ export class TavilySearchAdapter implements SearchAdapter {
       source: this.id,
     };
   }
+
+  private cacheSearchResults(
+    params: QueryParams,
+    searchResponse: SearchResponse,
+  ): void {
+    const cacheKey = createSearchCacheKey(params, this.id);
+    this.cache!.set(cacheKey, searchResponse, DEFAULT_CACHE_TTL_MS)
+      .then(() => {})
+      .catch(() => {}); // Ignore cache errors
+  }
 }
 
-/**
- * Factory function to create and register a Tavily Search adapter
- */
 export function registerTavilySearchAdapter(
   apiKey: string,
   cache?: CacheAdapter,

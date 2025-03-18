@@ -1,4 +1,4 @@
-import { err, ok, Result } from "neverthrow";
+import { err, ok, Result, ResultAsync } from "neverthrow";
 import { QueryParams, SearchError, SearchResponse, SearchResult } from "../../models/search.ts";
 import { CacheAdapter } from "../cache/cacheAdapter.ts";
 import { createSearchCacheKey, SearchAdapter } from "./searchAdapter.ts";
@@ -36,9 +36,6 @@ const DEFAULT_CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
 const MAX_RETRY_ATTEMPTS = 3;
 const INITIAL_BACKOFF_MS = 1000;
 
-/**
- * Adapter for the Brave Search API
- */
 export class BraveSearchAdapter implements SearchAdapter {
   readonly id = "brave";
   readonly name = "Brave Search";
@@ -70,8 +67,10 @@ export class BraveSearchAdapter implements SearchAdapter {
     return this.fetchAndCacheResults(params);
   }
 
-  private fetchAndCacheResults(params: QueryParams): Promise<Result<SearchResponse, SearchError>> {
-    return this.executeWithBackoff(() => this.executeSearch(params));
+  private async fetchAndCacheResults(
+    params: QueryParams,
+  ): Promise<Result<SearchResponse, SearchError>> {
+    return await this.executeWithBackoff(async () => await this.executeSearch(params));
   }
 
   getRelevanceScore(_query: string, category: QueryCategory): number {
@@ -87,7 +86,7 @@ export class BraveSearchAdapter implements SearchAdapter {
     return categoryScores[category] ?? 0.7; // Default score 0.7
   }
 
-  private async executeSearch(query: QueryParams): Promise<Result<SearchResponse, SearchError>> {
+  private executeSearch(query: QueryParams): ResultAsync<SearchResponse, SearchError> {
     const params: BraveSearchParams = {
       q: query.q,
       count: query.maxResults,
@@ -101,10 +100,25 @@ export class BraveSearchAdapter implements SearchAdapter {
       if (value !== undefined) urlParams.append(key, String(value));
     });
 
-    let response;
+    return this.fetchBraveSearchData(urlParams, query)
+      .andThen((data) => {
+        const searchResponse = this.mapBraveResponseToSearchResponse(data, query);
 
-    try {
-      response = await fetch(
+        if (this.cache) {
+          const cacheKey = createSearchCacheKey(query, this.id);
+          this.cacheSearchResults(cacheKey, searchResponse);
+        }
+
+        return ok(searchResponse);
+      });
+  }
+
+  private fetchBraveSearchData(
+    urlParams: URLSearchParams,
+    _query: QueryParams,
+  ): ResultAsync<BraveSearchResponse, SearchError> {
+    return ResultAsync.fromPromise(
+      fetch(
         `${BRAVE_API_ENDPOINT}?${urlParams}`,
         {
           headers: {
@@ -112,89 +126,84 @@ export class BraveSearchAdapter implements SearchAdapter {
             "X-Subscription-Token": this.apiKey,
           },
         },
-      );
-    } catch (error) {
-      // Special handling for Latin1 encoding errors
-      // NOTE: Brave Search API has limited support for non-Latin characters.
-      // Japanese, Chinese, Korean and other non-Latin script languages may fail
-      // with this encoding error. Users should use English queries for best results.
-      if (
-        error instanceof Error &&
-        error.message.includes("Latin1 range")
-      ) {
-        return err<SearchResponse, SearchError>({
-          type: "invalidQuery",
-          message: "Query contains characters that cannot be properly encoded",
-          issues: [
-            "Query contains characters that cannot be properly encoded. Try using English or Latin script characters.",
-          ],
-        });
-      }
-
-      return err<SearchResponse, SearchError>({
-        type: "network",
-        message: error instanceof Error ? error.message : "Unknown error",
-      });
-    }
-
-    if (!response.ok) {
-      if (response.status === 422) {
-        // Log error body for debugging if possible
-        try {
-          const errorBody = await response.text();
-          console.error(`422 Error response: ${errorBody}`);
-        } catch {
-          // Ignore text parsing errors
+      ),
+      (e) => {
+        if (
+          e instanceof Error &&
+          e.message.includes("Latin1 range")
+        ) {
+          return {
+            type: "invalidQuery",
+            message: "Query contains characters that cannot be properly encoded",
+            issues: [
+              "Query contains characters that cannot be properly encoded. Try using English or Latin script characters.",
+            ],
+          } as SearchError;
         }
 
-        return err<SearchResponse, SearchError>({
-          type: "invalidQuery",
-          message: "API rejected the query format",
-          issues: ["API rejected the query format. Try simplifying your search."],
-        });
-      }
+        return {
+          type: "network",
+          message: e instanceof Error ? e.message : "Unknown error",
+        } as SearchError;
+      },
+    )
+      .andThen((response) => {
+        if (!response.ok) {
+          if (response.status === 422) {
+            return this.handleErrorResponse(response, {
+              type: "invalidQuery",
+              message: "API rejected the query format",
+              issues: ["API rejected the query format. Try simplifying your search."],
+            });
+          }
 
-      if (response.status === 429) {
-        const retryAfter = response.headers.get("retry-after");
-        return err<SearchResponse, SearchError>({
-          type: "rateLimit",
-          message: "Rate limit exceeded",
-          retryAfterMs: retryAfter ? parseInt(retryAfter) * 1000 : 60000,
-        });
-      }
+          if (response.status === 429) {
+            const retryAfter = response.headers.get("retry-after");
+            return err<Response, SearchError>({
+              type: "rateLimit",
+              message: "Rate limit exceeded",
+              retryAfterMs: retryAfter ? parseInt(retryAfter) * 1000 : 60000,
+            });
+          }
 
-      if (response.status === 401 || response.status === 403) {
-        return err<SearchResponse, SearchError>({
-          type: "authorization",
-          message: `API Key authentication error: ${response.status}`,
-        });
-      }
+          if (response.status === 401 || response.status === 403) {
+            return err<Response, SearchError>({
+              type: "authorization",
+              message: `API Key authentication error: ${response.status}`,
+            });
+          }
 
-      return err<SearchResponse, SearchError>({
-        type: "network",
-        message: `API call error: ${response.status}`,
-      });
-    }
+          return err<Response, SearchError>({
+            type: "network",
+            message: `API call error: ${response.status}`,
+          });
+        }
 
-    try {
-      const data = await response.json();
-      const braveResponse = data as BraveSearchResponse;
-      const searchResponse = this.mapBraveResponseToSearchResponse(braveResponse, query);
+        return ok(response);
+      })
+      .andThen((response) =>
+        ResultAsync.fromPromise(
+          response.json() as Promise<BraveSearchResponse>,
+          () => ({
+            type: "network",
+            message: "Failed to parse API response",
+          } as SearchError),
+        )
+      );
+  }
 
-      // Store in cache if available (errors in caching are non-critical)
-      if (this.cache) {
-        const cacheKey = createSearchCacheKey(query, this.id);
-        this.cache.set(cacheKey, searchResponse, DEFAULT_CACHE_TTL_MS)
-          .catch(() => {}); // Ignore cache errors
-      }
+  private handleErrorResponse(
+    response: Response,
+    errorInfo: SearchError,
+  ): Result<Response, SearchError> {
+    ResultAsync.fromPromise(
+      response.text(),
+      () => "Error reading response text",
+    )
+      .map((errorBody) => console.error(`${response.status} Error response: ${errorBody}`))
+      .mapErr(() => {}); // Ignore text parsing errors
 
-      return ok<SearchResponse, SearchError>(searchResponse);
-    } catch (error) {
-      return err<SearchResponse, SearchError>({
-        type: "network",
-        message: "Failed to parse API response",
-      });
-    }
+    return err(errorInfo);
   }
 
   private async executeWithBackoff<T, E>(
@@ -233,7 +242,6 @@ export class BraveSearchAdapter implements SearchAdapter {
   }
 
   private calculateBackoff(attempt: number): number {
-    // Exponential backoff with jitter
     const exponentialBackoff = INITIAL_BACKOFF_MS * Math.pow(2, attempt - 1);
     const jitter = Math.random() * 0.3 * exponentialBackoff;
     return exponentialBackoff + jitter;
@@ -252,7 +260,6 @@ export class BraveSearchAdapter implements SearchAdapter {
       rank: result.position || index + 1,
       source: this.name,
       sourceType: "web",
-      // Add a simple relevance score based on rank
       relevanceScore: 1 - (index * 0.1),
     }));
 
@@ -263,6 +270,15 @@ export class BraveSearchAdapter implements SearchAdapter {
       searchTime: braveResponse.search_time_ms,
       source: this.id,
     };
+  }
+
+  private cacheSearchResults(
+    cacheKey: string,
+    searchResponse: SearchResponse,
+  ): void {
+    this.cache!.set(cacheKey, searchResponse, DEFAULT_CACHE_TTL_MS)
+      .then(() => {})
+      .catch(() => {}); // Ignore cache errors
   }
 
   private parseAge(age: string): number {
@@ -292,9 +308,6 @@ export class BraveSearchAdapter implements SearchAdapter {
   }
 }
 
-/**
- * Factory function to create and register a Brave Search adapter
- */
 export function registerBraveSearchAdapter(
   apiKey: string,
   cache?: CacheAdapter,

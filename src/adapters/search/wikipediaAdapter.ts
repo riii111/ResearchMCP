@@ -1,4 +1,4 @@
-import { err, ok, Result } from "neverthrow";
+import { err, ok, Result, ResultAsync } from "neverthrow";
 import { QueryParams, SearchError, SearchResponse, SearchResult } from "../../models/search.ts";
 import { CacheAdapter } from "../cache/cacheAdapter.ts";
 import { createSearchCacheKey, SearchAdapter } from "./searchAdapter.ts";
@@ -29,13 +29,8 @@ interface WikipediaSearchResponse {
   };
 }
 
-// API endpoint for Wikipedia search
-// We build the endpoint dynamically based on language
 const DEFAULT_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours - Wikipedia content changes less frequently
 
-/**
- * Adapter for the Wikipedia Search API
- */
 export class WikipediaAdapter implements SearchAdapter {
   readonly id = "wikipedia";
   readonly name = "Wikipedia";
@@ -64,7 +59,7 @@ export class WikipediaAdapter implements SearchAdapter {
     return this.fetchAndCacheResults(params);
   }
 
-  private fetchAndCacheResults(params: QueryParams): Promise<Result<SearchResponse, SearchError>> {
+  private fetchAndCacheResults(params: QueryParams): ResultAsync<SearchResponse, SearchError> {
     return this.executeSearch(params);
   }
 
@@ -81,7 +76,7 @@ export class WikipediaAdapter implements SearchAdapter {
     return categoryScores[category] ?? 0.4; // Default score 0.4
   }
 
-  private async executeSearch(params: QueryParams): Promise<Result<SearchResponse, SearchError>> {
+  private executeSearch(params: QueryParams): ResultAsync<SearchResponse, SearchError> {
     const startTime = Date.now();
 
     const urlParams = new URLSearchParams({
@@ -95,54 +90,56 @@ export class WikipediaAdapter implements SearchAdapter {
       origin: "*", // Required for CORS
     });
 
-    // Use user-specified language if available, otherwise use the adapter's default
     const lang = params.language || this.language;
     const apiUrl = `https://${lang}.wikipedia.org/w/api.php?${urlParams.toString()}`;
 
-    try {
-      const response = await fetch(apiUrl);
+    return this.fetchWikipediaData(apiUrl)
+      .andThen((wikipediaResponse) => {
+        const searchResponse = this.mapWikipediaResponseToSearchResponse(
+          wikipediaResponse,
+          params,
+          startTime,
+        );
 
-      if (!response.ok) {
-        return err({
-          type: "network",
-          message: `Wikipedia API error: ${response.status} ${response.statusText}`,
-        });
-      }
+        if (this.cache) {
+          this.cacheSearchResults(params, searchResponse);
+        }
 
-      let wikipediaResponse;
-      try {
-        wikipediaResponse = await response.json();
-      } catch {
-        return err({
-          type: "network",
-          message: "Failed to parse API response",
-        });
-      }
-
-      const searchResponse = this.mapWikipediaResponseToSearchResponse(
-        wikipediaResponse as WikipediaSearchResponse,
-        params,
-        startTime,
-      );
-
-      if (this.cache) {
-        const cacheKey = createSearchCacheKey(params, this.id);
-        this.cache.set(cacheKey, searchResponse, DEFAULT_CACHE_TTL_MS)
-          .catch(() => {}); // Ignore cache errors
-      }
-
-      return ok(searchResponse);
-    } catch (error) {
-      return err({
-        type: "network",
-        message: error instanceof Error ? error.message : "Unknown error",
+        return ok(searchResponse);
       });
-    }
   }
 
-  /**
-   * Map Wikipedia API response to standard search response format
-   */
+  private fetchWikipediaData(
+    apiUrl: string,
+  ): ResultAsync<WikipediaSearchResponse, SearchError> {
+    return ResultAsync.fromPromise(
+      fetch(apiUrl),
+      (e) => ({
+        type: "network",
+        message: e instanceof Error ? e.message : "Unknown error",
+      } as SearchError),
+    )
+      .andThen((response) => {
+        if (!response.ok) {
+          return err<Response, SearchError>({
+            type: "network",
+            message: `Wikipedia API error: ${response.status} ${response.statusText}`,
+          });
+        }
+
+        return ok(response);
+      })
+      .andThen((response) =>
+        ResultAsync.fromPromise(
+          response.json() as Promise<WikipediaSearchResponse>,
+          () => ({
+            type: "network",
+            message: "Failed to parse API response",
+          } as SearchError),
+        )
+      );
+  }
+
   private mapWikipediaResponseToSearchResponse(
     wikipediaResponse: WikipediaSearchResponse,
     params: QueryParams,
@@ -151,13 +148,11 @@ export class WikipediaAdapter implements SearchAdapter {
     const searchResults = wikipediaResponse.query.search;
 
     const results: SearchResult[] = searchResults.map((result, index) => {
-      // Remove HTML tags from snippet
       const cleanSnippet = result.snippet.replace(/<\/?[^>]+(>|$)/g, "");
 
       return {
         id: `wikipedia-${result.pageid}`,
         title: result.title,
-        // Create Wikipedia URL from title
         url: `https://${params.language || this.language}.wikipedia.org/wiki/${
           encodeURIComponent(result.title.replace(/ /g, "_"))
         }`,
@@ -166,7 +161,6 @@ export class WikipediaAdapter implements SearchAdapter {
         rank: index + 1,
         source: this.name,
         sourceType: "encyclopedia",
-        // Calculate relevance score based on position (1.0 to 0.1)
         relevanceScore: Math.max(0.1, 1 - (index * 0.1)),
       };
     });
@@ -179,11 +173,18 @@ export class WikipediaAdapter implements SearchAdapter {
       source: this.id,
     };
   }
+
+  private cacheSearchResults(
+    params: QueryParams,
+    searchResponse: SearchResponse,
+  ): void {
+    const cacheKey = createSearchCacheKey(params, this.id);
+    this.cache!.set(cacheKey, searchResponse, DEFAULT_CACHE_TTL_MS)
+      .then(() => {})
+      .catch(() => {}); // Ignore cache errors
+  }
 }
 
-/**
- * Factory function to create and register a Wikipedia adapter
- */
 export function registerWikipediaAdapter(
   cache?: CacheAdapter,
   language: string = "en",
