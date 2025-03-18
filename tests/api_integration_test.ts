@@ -35,7 +35,7 @@ class MockRoutingService extends RoutingService {
 
 // Helper function to create a test app with mock adapters
 function createTestApp(
-  mockSearchResults: Result<SearchResponse, SearchError>
+  mockSearchResults: Result<SearchResponse, SearchError>,
 ): Hono {
   const app = new Hono();
   const routingService = new MockRoutingService(mockSearchResults);
@@ -71,7 +71,6 @@ const mockSearchResponse: SearchResponse = {
   searchTime: 100,
   source: "mock-adapter",
 };
-
 
 Deno.test("MCP search endpoint returns correct response", async () => {
   const app = createTestApp(ok(mockSearchResponse));
