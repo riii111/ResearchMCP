@@ -1,7 +1,6 @@
 import { Context, Hono } from "hono";
 import { SearchUseCase } from "../../../application/ports/in/SearchUseCase.ts";
-import { QueryParams, SearchError, SearchResponse } from "../../../domain/models/search.ts";
-import { Result } from "neverthrow";
+import { QueryParams, SearchError } from "../../../domain/models/search.ts";
 
 /**
  * Controller for HTTP API endpoints
@@ -12,7 +11,7 @@ export class SearchController {
   createRouter(): Hono {
     const router = new Hono();
 
-    router.get("/search", async (c) => {
+    router.get("/search", (c) => {
       return this.handleSearchRequest(c);
     });
 

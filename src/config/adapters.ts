@@ -1,14 +1,14 @@
 import { CacheAdapterRepository } from "../adapters/out/cache/CacheAdapterRepository.ts";
 import { SearchAdapterRepository } from "../adapters/out/search/SearchAdapterRepository.ts";
-import { QueryClassifierAdapter } from "../adapters/out/classifier/QueryClassifierAdapter.ts";
-import { MemoryCacheAdapter } from "../adapters/cache/memoryCache.ts";
-import { registerBraveSearchAdapter } from "../adapters/search/braveSearchAdapter.ts";
-import { registerTavilySearchAdapter } from "../adapters/search/tavilySearchAdapter.ts";
-import { registerWikipediaAdapter } from "../adapters/search/wikipediaAdapter.ts";
-import { searchAdapterRegistry } from "../adapters/search/registry.ts";
+import { QueryClassifierAdapter } from "../adapters/out/search/QueryClassifierAdapter.ts";
+import { MemoryCacheAdapter } from "../adapters/out/cache/MemoryCacheAdapter.ts";
+import { registerBraveSearchAdapter } from "../adapters/out/search/BraveSearchAdapter.ts";
+import { registerTavilySearchAdapter } from "../adapters/out/search/TavilySearchAdapter.ts";
+import { registerWikipediaAdapter } from "../adapters/out/search/WikipediaAdapter.ts";
+import { searchAdapterRegistry } from "../adapters/out/search/Registry.ts";
 import { QueryClassifierService } from "../domain/services/queryClassifier.ts";
-// import { registerGitHubAdapter } from "../adapters/search/githubAdapter.ts";
-// import { registerStackExchangeAdapter } from "../adapters/search/stackExchangeAdapter.ts";
+// import { registerGitHubAdapter } from "../adapters/out/search/GithubAdapter.ts";
+// import { registerStackExchangeAdapter } from "../adapters/out/search/StackExchangeAdapter.ts";
 import type { ApiKeys } from "./env.ts";
 
 /**

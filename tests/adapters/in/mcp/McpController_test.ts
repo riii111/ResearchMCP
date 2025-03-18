@@ -1,9 +1,10 @@
-import { assertEquals, assertExists, assertRejects } from "testing/asserts.ts";
-import { afterEach, beforeEach, describe, it } from "testing/bdd.ts";
+import { assertEquals, assertExists } from "https://deno.land/std@0.211.0/assert/mod.ts";
+import { beforeEach, describe, it } from "https://deno.land/std@0.211.0/testing/bdd.ts";
 import { McpController } from "../../../../src/adapters/in/mcp/McpController.ts";
 import { SearchUseCase } from "../../../../src/application/ports/in/SearchUseCase.ts";
-import { McpRequest, McpResponse, McpResult } from "../../../../src/domain/models/mcp.ts";
-import { err, ok } from "neverthrow";
+import { McpError, McpRequest, McpResponse, McpResult } from "../../../../src/domain/models/mcp.ts";
+import { QueryParams, SearchError, SearchResponse } from "../../../../src/domain/models/search.ts";
+import { err, ok, Result } from "neverthrow";
 import { Context } from "hono";
 
 // Mock SearchUseCase
@@ -13,21 +14,33 @@ class MockSearchUseCase implements SearchUseCase {
   public mockResults: McpResult[] = [];
   public shouldFail = false;
 
-  async searchMcp(request: McpRequest) {
+  searchMcp(request: McpRequest): Promise<Result<McpResponse, McpError>> {
     this.searchMcpCalled = true;
     this.lastQuery = request.query;
 
     if (this.shouldFail) {
-      return err({
-        type: "search",
+      return Promise.resolve(err({
+        type: "search" as const,
         message: "Search failed",
         details: "Mock search error",
-      });
+      }));
     }
 
-    return ok({
+    return Promise.resolve(ok({
+      status: "success" as const,
       results: this.mockResults,
-    } as McpResponse);
+    }));
+  }
+
+  multiSearch(params: QueryParams): Promise<Result<SearchResponse, SearchError>> {
+    // Simple implementation for interface compliance
+    return Promise.resolve(ok({
+      query: params,
+      results: [],
+      totalResults: 0,
+      searchTime: 0,
+      source: "mock",
+    }));
   }
 }
 
@@ -55,12 +68,12 @@ function createMockContext(): Context {
 describe("McpController", () => {
   let mockSearchUseCase: MockSearchUseCase;
   let controller: McpController;
-  let mockContext: Context;
+  let _mockContext: Context;
 
   beforeEach(() => {
     mockSearchUseCase = new MockSearchUseCase();
     controller = new McpController(mockSearchUseCase);
-    mockContext = createMockContext();
+    _mockContext = createMockContext();
   });
 
   describe("createRouter", () => {

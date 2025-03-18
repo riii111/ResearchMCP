@@ -1,8 +1,8 @@
 /// <reference lib="deno.ns" />
 import { assertEquals, assertExists } from "https://deno.land/std@0.211.0/assert/mod.ts";
 import { ok, Result } from "neverthrow";
-import { SearchService } from "../../../src/application/services/search/SearchService.ts";
-import { RoutingService } from "../../../src/application/services/search/RoutingService.ts";
+import { SearchService } from "../../../src/application/services/SearchService.ts";
+import { RoutingService } from "../../../src/application/services/RoutingService.ts";
 import { QueryParams, SearchError, SearchResponse } from "../../../src/domain/models/search.ts";
 import { QueryCategory } from "../../../src/domain/models/routing.ts";
 import { QueryClassifierPort } from "../../../src/application/ports/out/QueryClassifierPort.ts";

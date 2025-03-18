@@ -535,7 +535,9 @@
     "https://deno.land/std@0.211.0/assert/mod.ts": "325df8c0683ad83a873b9691aa66b812d6275fc9fec0b2d180ac68a2c5efed3b",
     "https://deno.land/std@0.211.0/assert/unimplemented.ts": "47ca67d1c6dc53abd0bd729b71a31e0825fc452dbcd4fde4ca06789d5644e7fd",
     "https://deno.land/std@0.211.0/assert/unreachable.ts": "38cfecb95d8b06906022d2f9474794fca4161a994f83354fd079cac9032b5145",
-    "https://deno.land/std@0.211.0/fmt/colors.ts": "be082d6a6bbb2980ae7b2bf8c23c6bb2811ba90a06a9bcb861344a71784c5a99"
+    "https://deno.land/std@0.211.0/fmt/colors.ts": "be082d6a6bbb2980ae7b2bf8c23c6bb2811ba90a06a9bcb861344a71784c5a99",
+    "https://deno.land/std@0.211.0/testing/_test_suite.ts": "f10a8a6338b60c403f07a76f3f46bdc9f1e1a820c0a1decddeb2949f7a8a0546",
+    "https://deno.land/std@0.211.0/testing/bdd.ts": "3cbd17bd35f629a76ce63446238dfb4632240dd46b3b205027c45fa3dd67e554"
   },
   "workspace": {
     "dependencies": [

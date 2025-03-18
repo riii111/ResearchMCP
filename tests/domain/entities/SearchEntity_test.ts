@@ -1,5 +1,5 @@
 /// <reference lib="deno.ns" />
-import { assertEquals, assertExists } from "https://deno.land/std@0.211.0/assert/mod.ts";
+import { assertEquals } from "https://deno.land/std@0.211.0/assert/mod.ts";
 import { SearchEntity } from "../../../src/domain/entities/SearchEntity.ts";
 import { QueryParams, SearchResponse, SearchResult } from "../../../src/domain/models/search.ts";
 

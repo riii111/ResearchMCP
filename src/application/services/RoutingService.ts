@@ -1,4 +1,4 @@
-import { err, ok, Result } from "neverthrow";
+import { ok, Result, ResultAsync } from "neverthrow";
 import {
   QueryParams,
   SearchError,
@@ -18,54 +18,66 @@ export class RoutingService {
     private readonly searchRepositories: SearchRepository[],
   ) {}
 
-  async routeAndSearch(params: QueryParams): Promise<Result<SearchResponse, SearchError>> {
+  routeAndSearch(params: QueryParams): ResultAsync<SearchResponse, SearchError> {
     // Determine search category (use provided or classify)
     const categoryResult = params.routing?.category
       ? ok(params.routing.category)
       : this.classifyQuery(params.q);
 
     if (categoryResult.isErr()) {
-      return err({
-        type: "classification_error",
-        message: categoryResult.error.message,
-      });
+      return ResultAsync.fromPromise(
+        Promise.reject({
+          type: "classification_error",
+          message: categoryResult.error.message,
+        }),
+        (e) => e as SearchError,
+      );
     }
 
     const category = categoryResult.value;
     const repositories = this.getRepositoriesForCategory(category, params.q);
 
     if (repositories.length === 0) {
-      return err({
-        type: "no_adapter_available",
-        message: `No repository available for category ${category}`,
-      });
+      return ResultAsync.fromPromise(
+        Promise.reject({
+          type: "no_adapter_available",
+          message: `No repository available for category ${category}`,
+        }),
+        (e) => e as SearchError,
+      );
     }
 
     // Always use parallel search
     return this.multiSearch(params, category);
   }
 
-  async multiSearch(
+  multiSearch(
     params: QueryParams,
     category?: QueryCategory,
-  ): Promise<Result<SearchResponse, SearchError>> {
+  ): ResultAsync<SearchResponse, SearchError> {
     const categoryResult = category ? ok(category) : this.classifyQuery(params.q);
 
     if (categoryResult.isErr()) {
-      return err({
-        type: "classification_error",
-        message: categoryResult.error.message,
-      });
+      return ResultAsync.fromPromise(
+        Promise.reject({
+          type: "classification_error",
+          message: categoryResult.error.message,
+        }),
+        (e) => e as SearchError,
+      );
     }
 
     const resolvedCategory = categoryResult.value;
 
     const repositories = this.getRepositoriesForCategory(resolvedCategory, params.q);
     if (repositories.length === 0) {
-      return err({
-        type: "no_adapter_available",
-        message: `No repository available for category ${resolvedCategory}`,
-      });
+      return ResultAsync.fromPromise(
+        Promise.reject({
+          type: "no_adapter_available",
+          message: `No repository available for category ${resolvedCategory}`,
+        }),
+        (e) => e as SearchError,
+      );
     }
 
     const selectedRepositories = repositories;
@@ -98,13 +110,16 @@ export class RoutingService {
       ),
     );
 
-    return this.executeParallelSearches(selectedRepositories, params);
+    return ResultAsync.fromPromise(
+      this.executeParallelSearches(selectedRepositories, params),
+      (e) => e as SearchError,
+    );
   }
 
   private async executeParallelSearches(
     repositories: SearchRepository[],
     params: QueryParams,
-  ): Promise<Result<SearchResponse, SearchError>> {
+  ): Promise<SearchResponse> {
     const startTime = Date.now();
     const searchPromises = repositories.map((repository) => repository.search(params));
     const searchResults = await Promise.all(searchPromises);
@@ -114,13 +129,13 @@ export class RoutingService {
       // If all searches failed, return the first error
       const firstError = searchResults[0];
       if (firstError.isErr()) {
-        return firstError;
+        throw firstError.error;
       }
 
-      return err({
+      throw {
         type: "network",
         message: "All search repositories failed",
-      });
+      };
     }
 
     return this.mergeSearchResults(successResults, params, startTime);
@@ -130,7 +145,7 @@ export class RoutingService {
     successResults: Result<SearchResponse, SearchError>[],
     params: QueryParams,
     startTime: number,
-  ): Result<SearchResponse, SearchError> {
+  ): SearchResponse {
     const mergedResults: SearchResult[] = [];
     const sources: string[] = [];
     let totalResults = 0;
@@ -178,13 +193,13 @@ export class RoutingService {
       ),
     );
 
-    return ok({
+    return {
       query: params,
       results: sortedResults,
       totalResults,
       searchTime: Date.now() - startTime,
       source: sources.join(","),
-    });
+    };
   }
 
   private classifyQuery(query: string): Result<QueryCategory, SearchError> {
