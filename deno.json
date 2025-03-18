@@ -21,7 +21,8 @@
     "rules": {
       "tags": ["recommended"],
       "include": ["ban-untagged-todo", "no-explicit-any", "no-throw-literal"]
-    }
+    },
+    "plugins": ["https://deno.land/x/deno_lint_plugin_neverthrow@v0.1.1/mod.ts"]
   },
   "imports": {
     "hono": "npm:hono@4.1.2",
