@@ -246,5 +246,5 @@ export function registerTavilySearchAdapter(
   cache?: CacheAdapter,
 ): void {
   const adapter = new TavilySearchAdapter(apiKey, cache);
-  searchAdapterRegistry.register(adapter);
+  void searchAdapterRegistry.register(adapter);
 }

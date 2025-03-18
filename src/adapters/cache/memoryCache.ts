@@ -17,7 +17,7 @@ export class MemoryCacheAdapter implements CacheAdapter {
     }
 
     if (entry.expireAt < Date.now()) {
-      this.storage.delete(key);
+      void this.storage.delete(key);
       return Promise.resolve(ok(undefined));
     }
 
@@ -25,7 +25,7 @@ export class MemoryCacheAdapter implements CacheAdapter {
   }
 
   set<T>(key: string, value: T, ttlMs = 60 * 60 * 1000): Promise<Result<void, CacheError>> {
-    this.storage.set(key, {
+    void this.storage.set(key, {
       value,
       expireAt: Date.now() + ttlMs,
     });
@@ -34,14 +34,14 @@ export class MemoryCacheAdapter implements CacheAdapter {
   }
 
   clear(): void {
-    this.storage.clear();
+    void this.storage.clear();
   }
 
   removeExpired(): void {
     const now = Date.now();
     for (const [key, entry] of this.storage.entries()) {
       if (entry.expireAt < now) {
-        this.storage.delete(key);
+        void this.storage.delete(key);
       }
     }
   }

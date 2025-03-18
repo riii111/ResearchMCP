@@ -102,7 +102,7 @@ export class WikipediaAdapter implements SearchAdapter {
         );
 
         if (this.cache) {
-          this.cacheSearchResults(params, searchResponse);
+          void this.cacheSearchResults(params, searchResponse);
         }
 
         return ok(searchResponse);
@@ -179,7 +179,7 @@ export class WikipediaAdapter implements SearchAdapter {
     searchResponse: SearchResponse,
   ): void {
     const cacheKey = createSearchCacheKey(params, this.id);
-    this.cache!.set(cacheKey, searchResponse, DEFAULT_CACHE_TTL_MS)
+    void this.cache!.set(cacheKey, searchResponse, DEFAULT_CACHE_TTL_MS)
       .then(() => {})
       .catch(() => {}); // Ignore cache errors
   }
@@ -190,5 +190,5 @@ export function registerWikipediaAdapter(
   language: string = "en",
 ): void {
   const adapter = new WikipediaAdapter(cache, language);
-  searchAdapterRegistry.register(adapter);
+  void searchAdapterRegistry.register(adapter);
 }
