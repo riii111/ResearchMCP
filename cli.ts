@@ -7,36 +7,117 @@
  * Available for use from MCP clients such as Claude Desktop.
  */
 
-import { BraveSearchAdapter } from "./src/adapters/braveSearchAdapter.ts";
-import { MemoryCacheAdapter } from "./src/adapters/memoryCache.ts";
+import { loadApiKeys } from "./src/setup/env.ts";
+import { initializeAdapters } from "./src/setup/adapters.ts";
 import { SearchService } from "./src/services/searchService.ts";
+import { RoutingService } from "./src/services/routingService.ts";
 import { createMcpServer, startMcpStdioServer } from "./src/services/mcpService.ts";
+import { QueryClassifierService } from "./src/services/queryClassifierService.ts";
+import { err, fromThrowable, ok, Result, ResultAsync } from "neverthrow";
 
-// Check environment variables
-const braveApiKey = Deno.env.get("BRAVE_API_KEY");
+const encoder = new TextEncoder();
+const logToStderr = (message: string) => {
+  Deno.stderr.writeSync(encoder.encode(message + "\n"));
+};
 
-if (!braveApiKey) {
-  console.error("Error: BRAVE_API_KEY environment variable is not set");
-  console.error("Please set the BRAVE_API_KEY environment variable and try again");
-  Deno.exit(1);
+type SetupError = {
+  type: "setup";
+  message: string;
+};
+
+type ServerError = {
+  type: "server";
+  message: string;
+};
+
+type CliError = SetupError | ServerError;
+
+function setupServices(): Result<SearchService, CliError> {
+  const loadApiKeysResult = fromThrowable(
+    loadApiKeys,
+    (error): CliError => ({
+      type: "setup",
+      message: `Failed to setup services: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    }),
+  )();
+
+  if (loadApiKeysResult.isErr()) {
+    return err(loadApiKeysResult.error);
+  }
+
+  const apiKeys = loadApiKeysResult.value;
+
+  const initAdaptersResult = fromThrowable(
+    () => initializeAdapters(apiKeys),
+    (error): CliError => ({
+      type: "setup",
+      message: `Failed to initialize adapters: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    }),
+  )();
+
+  if (initAdaptersResult.isErr()) {
+    return err(initAdaptersResult.error);
+  }
+
+  const queryClassifier = new QueryClassifierService();
+  const routingService = new RoutingService(queryClassifier);
+  const searchService = new SearchService(routingService);
+
+  return ok(searchService);
 }
 
-try {
-  // Setup adapters and services
-  const cacheAdapter = new MemoryCacheAdapter();
-  const searchAdapter = new BraveSearchAdapter(braveApiKey, cacheAdapter);
-  const searchService = new SearchService(searchAdapter);
+function startServer(): ResultAsync<void, CliError> {
+  const serviceResult = setupServices();
 
-  // Create and start MCP server
-  const mcpServer = createMcpServer(searchService);
+  return serviceResult.match(
+    (searchService) => {
+      logToStderr("Starting ResearchMCP server...");
+      logToStderr("Server capabilities:");
+      logToStderr("- search tool: enabled");
+      logToStderr("- resources: minimal implementation");
+      logToStderr("- prompts: minimal implementation");
 
-  console.error("Starting ResearchMCP server...");
-  console.error("Server capabilities:");
-  console.error("- search tool: enabled");
-  console.error("- resources: minimal implementation");
-  console.error("- prompts: minimal implementation");
-  await startMcpStdioServer(mcpServer);
-} catch (error) {
-  console.error(`Fatal error: ${error}`);
-  Deno.exit(1);
+      const mcpServer = createMcpServer(searchService);
+
+      return ResultAsync.fromPromise(
+        startMcpStdioServer(mcpServer).then((result) =>
+          result.match(
+            () => undefined,
+            (e) => {
+              throw e;
+            },
+          )
+        ),
+        (error) => ({
+          type: "server",
+          message: `Server error: ${error instanceof Error ? error.message : String(error)}`,
+        }),
+      );
+    },
+    (error) =>
+      ResultAsync.fromPromise(
+        Promise.resolve(undefined),
+        () => ({
+          type: "server",
+          message: `Error from setup: ${error.message}`,
+        }),
+      ),
+  );
 }
+
+startServer()
+  .then((result) => {
+    result.match(
+      () => {
+        // Do nothing on normal termination
+      },
+      (error) => {
+        logToStderr(`Fatal error: ${error.message}`);
+        Deno.exit(1);
+      },
+    );
+  });

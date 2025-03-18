@@ -2,24 +2,41 @@
 import { assertEquals, assertExists } from "https://deno.land/std@0.211.0/assert/mod.ts";
 import { ok, Result } from "neverthrow";
 import { Hono } from "hono";
-import { SearchAdapter } from "../src/adapters/searchAdapter.ts";
 import {
   ClaudeAdapter,
   ClaudeError,
   ClaudeRequest,
   ClaudeResponse,
-} from "../src/adapters/claudeAdapter.ts";
+} from "../src/adapters/claude/claudeAdapter.ts";
 import { SearchService } from "../src/services/searchService.ts";
 import { ResearchService } from "../src/services/researchService.ts";
 import { createMcpRouter } from "../src/routes/mcp.ts";
 import { createResearchRouter } from "../src/routes/research.ts";
 import { QueryParams, SearchError, SearchResponse } from "../src/models/search.ts";
+import { QueryCategory } from "../src/models/routing.ts";
 import { McpResponse } from "../src/models/mcp.ts";
+import { RoutingService } from "../src/services/routingService.ts";
+import { QueryClassifierService } from "../src/services/queryClassifierService.ts";
 
-class MockSearchAdapter implements SearchAdapter {
-  constructor(private readonly mockResults: Result<SearchResponse, SearchError>) {}
+class MockQueryClassifier extends QueryClassifierService {
+  override classifyQuery(_query: string): Result<QueryCategory, Error> {
+    return ok("general" as QueryCategory);
+  }
+}
 
-  search(_query: QueryParams): Promise<Result<SearchResponse, SearchError>> {
+class MockRoutingService extends RoutingService {
+  private mockResults: Result<SearchResponse, SearchError>;
+
+  constructor(results: Result<SearchResponse, SearchError>) {
+    super(new MockQueryClassifier());
+    this.mockResults = results;
+  }
+
+  override routeAndSearch(_params: QueryParams): Promise<Result<SearchResponse, SearchError>> {
+    return Promise.resolve(this.mockResults);
+  }
+
+  override multiSearch(_params: QueryParams): Promise<Result<SearchResponse, SearchError>> {
     return Promise.resolve(this.mockResults);
   }
 }
@@ -43,8 +60,8 @@ function createTestApp(
   mockClaudeResponse?: Result<ClaudeResponse, ClaudeError>,
 ): Hono {
   const app = new Hono();
-  const searchAdapter = new MockSearchAdapter(mockSearchResults);
-  const searchService = new SearchService(searchAdapter);
+  const routingService = new MockRoutingService(mockSearchResults);
+  const searchService = new SearchService(routingService);
 
   app.route("/mcp", createMcpRouter(searchService));
 
@@ -80,6 +97,7 @@ const mockSearchResponse: SearchResponse = {
   ],
   totalResults: 2,
   searchTime: 100,
+  source: "mock-adapter",
 };
 
 // Mock Claude response

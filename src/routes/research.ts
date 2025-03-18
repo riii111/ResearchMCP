@@ -1,8 +1,15 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { ResearchService } from "../services/researchService.ts";
-import { McpRequest, McpResult } from "../models/mcp.ts";
-import { getErrorSafe, getValueSafe } from "../utils/resultUtils.ts";
+import { McpRequest } from "../models/mcp.ts";
+import { err, ok } from "neverthrow";
+import { getErrorStatusCode } from "../utils/errors.ts";
+import {
+  createResearchErrorResponse,
+  ResearchParseError,
+  ResearchSuccessResponse,
+  ResearchValidationError,
+} from "../models/research.ts";
 
 const researchRequestSchema = z.object({
   query: z.string().min(1).max(200),
@@ -15,99 +22,70 @@ const researchRequestSchema = z.object({
   }).optional(),
 });
 
-// Define response types
-export interface ResearchSuccessResponse {
-  status: "success";
-  result: {
-    query: string;
-    searchResults: ReadonlyArray<McpResult>;
-    summary: string;
-    insights: string[];
-    sources: string[];
-  };
-}
-
-export interface ResearchErrorResponse {
-  status: "error";
-  message: string;
-  type?: string;
-  error?: Record<string, unknown> | string;
-  result?: {
-    query: string;
-    searchResults: ReadonlyArray<McpResult>;
-    summary: string;
-    insights: string[];
-    sources: string[];
-  };
-}
-
-export type ResearchResponse = ResearchSuccessResponse | ResearchErrorResponse;
-
 export function createResearchRouter(researchService: ResearchService): Hono {
   const router = new Hono();
 
   router.post("/", async (c) => {
-    try {
-      const data = await c.req.json();
-      const result = researchRequestSchema.safeParse(data);
+    const jsonResult = await c.req.json()
+      .then((data) => ok(data))
+      .catch((error) =>
+        err<McpRequest, ResearchParseError>({
+          type: "parse",
+          message: error instanceof Error ? error.message : "Unknown error",
+        })
+      );
 
-      if (!result.success) {
-        const errorResponse: ResearchErrorResponse = {
-          status: "error",
-          message: "Validation error",
-          error: result.error.format(),
-        };
-        return c.json(errorResponse, 400);
-      }
+    if (jsonResult.isErr()) {
+      return c.json(
+        createResearchErrorResponse(
+          "Request parsing error",
+          jsonResult.error.message,
+          jsonResult.error.type,
+        ),
+        { status: getErrorStatusCode(jsonResult.error) },
+      );
+    }
 
-      const request = result.data as McpRequest;
-      const researchResult = await researchService.research(request);
+    const validationResult = researchRequestSchema.safeParse(jsonResult.value);
+    if (!validationResult.success) {
+      const validationError: ResearchValidationError = {
+        type: "validation",
+        message: "Validation error",
+      };
 
-      if (researchResult.isOk()) {
-        const resultValue = getValueSafe(researchResult);
+      return c.json(
+        createResearchErrorResponse(
+          "Validation error",
+          validationResult.error.format(),
+          validationError.type,
+        ),
+        { status: getErrorStatusCode(validationError) },
+      );
+    }
+
+    const request = validationResult.data as McpRequest;
+    const researchResult = await researchService.research(request);
+
+    return researchResult.match<Response>(
+      (result) => {
         const successResponse: ResearchSuccessResponse = {
           status: "success",
-          result: resultValue!,
+          result,
         };
         return c.json(successResponse);
-      } else {
-        const error = getErrorSafe(researchResult);
-        if (!error) {
-          return c.json({ status: "error", message: "Unknown error" }, 500);
-        }
+      },
+      (error) => {
+        const statusCode = getErrorStatusCode(error);
+        const errorResponse = createResearchErrorResponse(
+          error.message,
+          undefined,
+          error.type,
+          { query: request.query },
+        );
 
-        // Type assertion to ensure error is properly typed
-        const typedError = error as { type: string; message: string };
-        const status = typedError.type === "validation" ? 400 : 500;
-        const errorResponse: ResearchErrorResponse = {
-          status: "error",
-          message: typedError.message,
-          type: typedError.type,
-          result: {
-            query: request.query,
-            searchResults: [],
-            summary: "",
-            insights: [],
-            sources: [],
-          },
-        };
-        return c.json(errorResponse, status);
-      }
-    } catch (error) {
-      const errorResponse: ResearchErrorResponse = {
-        status: "error",
-        message: "Request parsing error",
-        error: error instanceof Error ? error.message : "Unknown error",
-        result: {
-          query: "",
-          searchResults: [],
-          summary: "",
-          insights: [],
-          sources: [],
-        },
-      };
-      return c.json(errorResponse, 400);
-    }
+        return c.json(errorResponse, { status: statusCode });
+      },
+    );
   });
 
   return router;

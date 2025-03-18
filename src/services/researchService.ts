@@ -1,7 +1,7 @@
 import { err, ok, Result } from "neverthrow";
 import { SearchService } from "./searchService.ts";
-import { ClaudeAdapter, ClaudeMessage } from "../adapters/claudeAdapter.ts";
-import { McpError, McpRequest, McpResult } from "../models/mcp.ts";
+import { ClaudeAdapter, ClaudeMessage } from "../adapters/claude/claudeAdapter.ts";
+import { McpError, McpRequest, McpResult, McpServerError } from "../models/mcp.ts";
 import { ClaudeResponseType } from "../models/claude.ts";
 import { getErrorSafe, getValueSafe } from "../utils/resultUtils.ts";
 import {
@@ -48,7 +48,6 @@ export class ResearchService {
       });
     }
 
-    // Extract search data using destructuring
     const { value: searchData } = searchResult;
 
     const successData = isSuccessResponseWithResults(searchData)
@@ -79,7 +78,6 @@ export class ResearchService {
       });
     }
 
-    // Extract the successful result using our helper
     const analysis = getValueSafe(analysisResult);
     if (!analysis) {
       return err({
@@ -88,7 +86,6 @@ export class ResearchService {
       });
     }
 
-    // Ensure analysis is properly typed
     if (!isClaudeResponseType(analysis)) {
       return err({
         type: "analysis_failed",
@@ -96,10 +93,8 @@ export class ResearchService {
       });
     }
 
-    // Analysis is now properly typed as ClaudeResponseType
     const typedAnalysis = analysis as ClaudeResponseType;
 
-    // Return the research result
     return ok({
       query: request.query,
       searchResults: successData.results,
@@ -139,51 +134,53 @@ export class ResearchService {
       });
     }
 
-    try {
-      const claudeResponse = getValueSafe(response);
-      if (!claudeResponse) {
-        return err({
-          type: "server",
-          message: "Failed to get Claude response",
-        });
-      }
-
-      if (!isValidClaudeResponse(claudeResponse)) {
-        return err({
-          type: "server",
-          message: "Invalid Claude response format",
-        });
-      }
-
-      const content = claudeResponse.content[0].text;
-
-      try {
-        const parsedData = JSON.parse(content);
-
-        if (!isClaudeResponseType(parsedData)) {
-          return err({
-            type: "server",
-            message: "Claude response does not match expected format",
-          });
-        }
-
-        return ok(parsedData);
-      } catch (parseError) {
-        return err({
-          type: "server",
-          message: `Failed to parse JSON from Claude response: ${
-            parseError instanceof Error ? parseError.message : "Invalid JSON"
-          }`,
-        });
-      }
-    } catch (error) {
+    const claudeResponse = getValueSafe(response);
+    if (!claudeResponse) {
       return err({
         type: "server",
-        message: `Failed to parse Claude response: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
+        message: "Failed to get Claude response",
       });
     }
+
+    if (!isValidClaudeResponse(claudeResponse)) {
+      return err({
+        type: "server",
+        message: "Invalid Claude response format",
+      });
+    }
+
+    const content = claudeResponse.content[0].text;
+
+    return this.parseJsonContent(content);
+  }
+
+  private parseJsonContent(content: string): Result<ClaudeResponseType, McpError> {
+    return this.safeJsonParse(content).andThen((parsedData) => {
+      if (!isClaudeResponseType(parsedData)) {
+        const serverError: McpServerError = {
+          type: "server",
+          message: "Claude response does not match expected format",
+          details: undefined,
+        };
+        return err(serverError);
+      }
+      return ok(parsedData);
+    });
+  }
+
+  private safeJsonParse(text: string): Result<unknown, McpError> {
+    const serverError: McpServerError = {
+      type: "server",
+      message: "Failed to parse JSON from Claude response",
+      details: undefined,
+    };
+
+    const parseJSON = Result.fromThrowable(
+      JSON.parse,
+      () => serverError,
+    );
+
+    return parseJSON(text);
   }
 
   private buildAnalysisPrompt(query: string, results: ReadonlyArray<McpResult>): string {

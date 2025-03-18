@@ -1,62 +1,67 @@
 /// <reference lib="deno.ns" />
+/// <reference types="npm:neverthrow@6.1.0" />
+/// <reference types="npm:zod@3.22.4" />
 import { Hono } from "hono";
 import { logger } from "hono/logger";
 import { secureHeaders } from "hono/secure-headers";
-import { BraveSearchAdapter } from "./src/adapters/braveSearchAdapter.ts";
-import { AnthropicClaudeAdapter } from "./src/adapters/claudeAdapter.ts";
-import { MemoryCacheAdapter } from "./src/adapters/memoryCache.ts";
+import { getServerPort, loadApiKeys } from "./src/setup/env.ts";
+import { initializeAdapters } from "./src/setup/adapters.ts";
+import { QueryClassifierService } from "./src/services/queryClassifierService.ts";
+import { RoutingService } from "./src/services/routingService.ts";
 import { SearchService } from "./src/services/searchService.ts";
 import { ResearchService } from "./src/services/researchService.ts";
 import { createMcpRouter } from "./src/routes/mcp.ts";
 import { createResearchRouter } from "./src/routes/research.ts";
+import { ApiError, createErrorResponse } from "./src/utils/errors.ts";
+
+const apiKeys = loadApiKeys();
+const port = getServerPort();
 
 const app = new Hono();
-const port = parseInt(Deno.env.get("PORT") || "8088");
-const braveApiKey = Deno.env.get("BRAVE_API_KEY");
-const claudeApiKey = Deno.env.get("CLAUDE_API_KEY");
-
-if (!braveApiKey) {
-  console.error("Environment variable BRAVE_API_KEY is not set");
-  Deno.exit(1);
-}
-
 app.use(logger());
 app.use(secureHeaders());
 
-// Setup adapters
-const cacheAdapter = new MemoryCacheAdapter();
-const searchAdapter = new BraveSearchAdapter(braveApiKey, cacheAdapter);
-const searchService = new SearchService(searchAdapter);
+const adapters = initializeAdapters(apiKeys);
 
-// Setup endpoints
+const queryClassifier = new QueryClassifierService();
+const routingService = new RoutingService(queryClassifier);
+const searchService = new SearchService(routingService);
+
 app.get("/", (c) => {
   return c.json({
     name: "ResearchMCP",
     status: "running",
-    version: "0.1.0",
+    version: "0.2.0",
   });
 });
 
 app.route("/mcp", createMcpRouter(searchService));
 
-// Setup Claude API integration if API key is available
-if (claudeApiKey) {
-  const claudeAdapter = new AnthropicClaudeAdapter(claudeApiKey);
-  const researchService = new ResearchService(searchService, claudeAdapter);
+if (adapters.claude) {
+  const researchService = new ResearchService(searchService, adapters.claude);
   app.route("/research", createResearchRouter(researchService));
-  console.log("Claude API integration enabled");
-} else {
-  console.log("Claude API integration disabled (no API key)");
 }
 
-// Error handlers
 app.notFound((c) => {
-  return c.json({ message: "Not Found" }, 404);
+  return c.json(createErrorResponse("Not Found"), { status: 404 });
 });
 
 app.onError((err, c) => {
-  console.error(`${err}`);
-  return c.json({ message: "Internal Server Error" }, 500);
+  console.error(`Error: ${err}`);
+
+  if (err instanceof ApiError) {
+    return c.json(
+      createErrorResponse(err.message, err.details),
+      { status: err.status },
+    );
+  }
+
+  // Unhandled error
+  const message = err instanceof Error ? err.message : "Internal Server Error";
+  return c.json(
+    createErrorResponse(message),
+    { status: 500 },
+  );
 });
 
 console.log(`Server running on http://localhost:${port}`);
