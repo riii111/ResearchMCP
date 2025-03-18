@@ -25,68 +25,83 @@ const researchRequestSchema = z.object({
 export function createResearchRouter(researchService: ResearchService): Hono {
   const router = new Hono();
 
-  router.post("/", async (c) => {
-    const jsonResult = await c.req.json()
-      .then((data) => ok(data))
-      .catch((error) =>
-        err<McpRequest, ResearchParseError>({
-          type: "parse",
-          message: error instanceof Error ? error.message : "Unknown error",
-        })
-      );
+  void router.post("/", (c) => handleResearchRequest(c, researchService));
 
-    if (jsonResult.isErr()) {
+  return router;
+}
+
+async function handleResearchRequest(
+  c: Parameters<Hono["post"]>[1],
+  researchService: ResearchService
+): Promise<Response> {
+  const jsonResult = await c.req.json()
+    .then((data) => ok(data))
+    .catch((error) =>
+      err<McpRequest, ResearchParseError>({
+        type: "parse",
+        message: error instanceof Error ? error.message : "Unknown error",
+      })
+    );
+
+  return jsonResult.match(
+    (jsonData) => {
+      const validationResult = researchRequestSchema.safeParse(jsonData);
+      if (!validationResult.success) {
+        const validationError: ResearchValidationError = {
+          type: "validation",
+          message: "Validation error",
+        };
+
+        return c.json(
+          createResearchErrorResponse(
+            "Validation error",
+            validationResult.error.format(),
+            validationError.type,
+          ),
+          { status: getErrorStatusCode(validationError) },
+        );
+      }
+
+      return processResearchRequest(c, researchService, validationResult.data as McpRequest);
+    },
+    (parseError) => {
       return c.json(
         createResearchErrorResponse(
           "Request parsing error",
-          jsonResult.error.message,
-          jsonResult.error.type,
+          parseError.message,
+          parseError.type,
         ),
-        { status: getErrorStatusCode(jsonResult.error) },
+        { status: getErrorStatusCode(parseError) },
       );
     }
+  );
+}
 
-    const validationResult = researchRequestSchema.safeParse(jsonResult.value);
-    if (!validationResult.success) {
-      const validationError: ResearchValidationError = {
-        type: "validation",
-        message: "Validation error",
+async function processResearchRequest(
+  c: Parameters<Hono["post"]>[1],
+  researchService: ResearchService,
+  request: McpRequest
+): Promise<Response> {
+  const researchResult = await researchService.research(request);
+
+  return researchResult.match<Response>(
+    (result) => {
+      const successResponse: ResearchSuccessResponse = {
+        status: "success",
+        result,
       };
-
-      return c.json(
-        createResearchErrorResponse(
-          "Validation error",
-          validationResult.error.format(),
-          validationError.type,
-        ),
-        { status: getErrorStatusCode(validationError) },
+      return c.json(successResponse);
+    },
+    (error) => {
+      const statusCode = getErrorStatusCode(error);
+      const errorResponse = createResearchErrorResponse(
+        error.message,
+        undefined,
+        error.type,
+        { query: request.query },
       );
-    }
 
-    const request = validationResult.data as McpRequest;
-    const researchResult = await researchService.research(request);
-
-    return researchResult.match<Response>(
-      (result) => {
-        const successResponse: ResearchSuccessResponse = {
-          status: "success",
-          result,
-        };
-        return c.json(successResponse);
-      },
-      (error) => {
-        const statusCode = getErrorStatusCode(error);
-        const errorResponse = createResearchErrorResponse(
-          error.message,
-          undefined,
-          error.type,
-          { query: request.query },
-        );
-
-        return c.json(errorResponse, { status: statusCode });
-      },
-    );
-  });
-
-  return router;
+      return c.json(errorResponse, { status: statusCode });
+    },
+  );
 }

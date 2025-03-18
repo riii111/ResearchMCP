@@ -25,63 +25,69 @@ const mcpRequestSchema = z.object({
 export function createMcpRouter(searchService: SearchService): Hono {
   const router = new Hono();
 
-  router.post("/search", async (c) => {
-    const jsonResult = await c.req.json()
-      .then((data) => ok(data))
-      .catch((error) =>
-        err<McpRequest, McpParseError>({
-          type: "parse",
-          message: error instanceof Error ? error.message : "Unknown error",
-          details: undefined,
-        })
-      );
-
-    return jsonResult.match(
-      (jsonData) => {
-        const validationResult = mcpRequestSchema.safeParse(jsonData);
-        if (!validationResult.success) {
-          const validationError: McpError = {
-            type: "validation",
-            message: "Validation error",
-            details: JSON.stringify(validationResult.error.format()),
-          };
-          return c.json(
-            createMcpErrorResponse("Validation error", validationError.details),
-            { status: getErrorStatusCode(validationError) },
-          );
-        }
-
-        return processValidatedRequest(c, searchService, validationResult.data as McpRequest);
-      },
-      (parseError) => {
-        return c.json(
-          createMcpErrorResponse("Request parsing error", parseError.message),
-          { status: getErrorStatusCode(parseError) },
-        );
-      },
-    );
-  });
-
-  async function processValidatedRequest(
-    c: Parameters<Hono["post"]>[1],
-    searchService: SearchService,
-    request: McpRequest,
-  ): Promise<Response> {
-    const searchResult = await searchService.searchMcp(request);
-    return searchResult.match<Response>(
-      (response) => c.json(response as McpSuccessResponse),
-      (error) => {
-        const statusCode = getErrorStatusCode(error);
-        const errorMessage = error.type === "validation" ? error.message : "Search error";
-        const errorDetails = error.type === "search" ? error.details : undefined;
-
-        return c.json(
-          createMcpErrorResponse(errorMessage, errorDetails),
-          { status: statusCode },
-        );
-      },
-    );
-  }
+  // Mark with void to satisfy neverthrow linter
+  void router.post("/search", (c) => handleMcpRequest(c, searchService));
 
   return router;
+}
+
+async function handleMcpRequest(
+  c: Parameters<Hono["post"]>[1],
+  searchService: SearchService
+): Promise<Response> {
+  const jsonResult = await c.req.json()
+    .then((data) => ok(data))
+    .catch((error) =>
+      err<McpRequest, McpParseError>({
+        type: "parse",
+        message: error instanceof Error ? error.message : "Unknown error",
+        details: undefined,
+      })
+    );
+
+  return jsonResult.match(
+    (jsonData) => {
+      const validationResult = mcpRequestSchema.safeParse(jsonData);
+      if (!validationResult.success) {
+        const validationError: McpError = {
+          type: "validation",
+          message: "Validation error",
+          details: JSON.stringify(validationResult.error.format()),
+        };
+        return c.json(
+          createMcpErrorResponse("Validation error", validationError.details),
+          { status: getErrorStatusCode(validationError) },
+        );
+      }
+
+      return processValidatedRequest(c, searchService, validationResult.data as McpRequest);
+    },
+    (parseError) => {
+      return c.json(
+        createMcpErrorResponse("Request parsing error", parseError.message),
+        { status: getErrorStatusCode(parseError) },
+      );
+    },
+  );
+}
+
+async function processValidatedRequest(
+  c: Parameters<Hono["post"]>[1],
+  searchService: SearchService,
+  request: McpRequest,
+): Promise<Response> {
+  const searchResult = await searchService.searchMcp(request);
+  return searchResult.match<Response>(
+    (response) => c.json(response as McpSuccessResponse),
+    (error) => {
+      const statusCode = getErrorStatusCode(error);
+      const errorMessage = error.type === "validation" ? error.message : "Search error";
+      const errorDetails = error.type === "search" ? error.details : undefined;
+
+      return c.json(
+        createMcpErrorResponse(errorMessage, errorDetails),
+        { status: statusCode },
+      );
+    },
+  );
 }
