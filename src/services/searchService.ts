@@ -26,6 +26,7 @@ export class SearchService {
       return err({
         type: "validation",
         message: "Search query is required",
+        details: undefined,
       });
     }
 
@@ -95,6 +96,7 @@ export class SearchService {
 
         return err({
           type: "search",
+          message: "Search failed",
           details: message,
         });
       },
