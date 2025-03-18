@@ -19,6 +19,7 @@ DeepResearch.
 2. Clone the repository
 3. Set environment variables
    - `BRAVE_API_KEY`: Brave Search API key
+   - `TAVILY_API_KEY`: Tavily Search API key
    - `CLAUDE_API_KEY`: Claude API key (optional)
 4. Run the application:
 
