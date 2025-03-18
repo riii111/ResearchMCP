@@ -1,5 +1,5 @@
 import { ok, Result } from "neverthrow";
-import { CacheAdapter, CacheError } from "./cacheAdapter.ts";
+import { CacheAdapter, CacheError } from "./CacheAdapter.ts";
 
 interface CacheEntry<T> {
   value: T;

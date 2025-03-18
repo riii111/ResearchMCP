@@ -1,6 +1,6 @@
 import { Result } from "neverthrow";
-import { QueryParams, SearchError, SearchResponse } from "../../domain/models/search.ts";
-import { QueryCategory } from "../../domain/models/routing.ts";
+import { QueryParams, SearchError, SearchResponse } from "../../../domain/models/search.ts";
+import { QueryCategory } from "../../../domain/models/routing.ts";
 
 /**
  * Interface for search adapters that connect to external search APIs

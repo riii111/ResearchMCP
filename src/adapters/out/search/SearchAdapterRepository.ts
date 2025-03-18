@@ -2,7 +2,7 @@ import { Result } from "neverthrow";
 import { QueryParams, SearchError, SearchResponse } from "../../../domain/models/search.ts";
 import { QueryCategory } from "../../../domain/models/routing.ts";
 import { SearchRepository } from "../../../application/ports/out/SearchRepository.ts";
-import { SearchAdapter } from "../../search/searchAdapter.ts";
+import { SearchAdapter } from "./SearchAdapter.ts";
 
 /**
  * Adapter that converts SearchAdapter to SearchRepository

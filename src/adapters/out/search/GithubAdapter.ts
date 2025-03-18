@@ -1,9 +1,14 @@
 import { err, ok, Result, ResultAsync } from "neverthrow";
-import { QueryParams, SearchError, SearchResponse, SearchResult } from "../../domain/models/search.ts";
-import { CacheAdapter } from "../cache/cacheAdapter.ts";
-import { createSearchCacheKey, SearchAdapter } from "./searchAdapter.ts";
-import { QueryCategory } from "../../domain/models/routing.ts";
-import { searchAdapterRegistry } from "./registry.ts";
+import {
+  QueryParams,
+  SearchError,
+  SearchResponse,
+  SearchResult,
+} from "../../../domain/models/search.ts";
+import { CacheAdapter } from "../cache/CacheAdapter.ts";
+import { createSearchCacheKey, SearchAdapter } from "./SearchAdapter.ts";
+import { QueryCategory } from "../../../domain/models/routing.ts";
+import { searchAdapterRegistry } from "./Registry.ts";
 
 interface GitHubSearchParams {
   q: string;

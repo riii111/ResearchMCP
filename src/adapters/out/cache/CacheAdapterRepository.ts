@@ -3,7 +3,7 @@ import {
   CacheError as RepoCacheError,
   CacheRepository,
 } from "../../../application/ports/out/CacheRepository.ts";
-import { CacheAdapter, CacheError as AdapterCacheError } from "../../cache/cacheAdapter.ts";
+import { CacheAdapter, CacheError as AdapterCacheError } from "./CacheAdapter.ts";
 
 /**
  * Adapter that converts CacheAdapter to CacheRepository

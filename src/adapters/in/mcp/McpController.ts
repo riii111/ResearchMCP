@@ -13,7 +13,7 @@ import {
   McpSuccessResponse,
 } from "../../../domain/models/mcp.ts";
 import { err, ok, Result } from "neverthrow";
-import { getErrorStatusCode } from "../../../utils/errors.ts";
+import { getErrorStatusCode } from "../../../domain/models/errors.ts";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 
 type McpControllerError = McpError | McpParseError;
