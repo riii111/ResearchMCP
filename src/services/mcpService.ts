@@ -46,10 +46,9 @@ export function createMcpServer(searchService: SearchService): McpServer {
     }),
   );
 
-  // @ts-ignore - Ignoring type error due to Zod version compatibility issues
   server.tool(
-    "search", 
-    "Search the web for information", 
+    "search",
+    "Search the web for information",
     {
       query: z.string().min(1).max(200),
       context: z.array(z.string()).optional(),
