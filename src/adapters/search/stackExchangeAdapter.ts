@@ -1,8 +1,8 @@
 import { err, ok, Result, ResultAsync } from "neverthrow";
-import { QueryParams, SearchError, SearchResponse, SearchResult } from "../../models/search.ts";
+import { QueryParams, SearchError, SearchResponse, SearchResult } from "../../domain/models/search.ts";
 import { CacheAdapter } from "../cache/cacheAdapter.ts";
 import { createSearchCacheKey, SearchAdapter } from "./searchAdapter.ts";
-import { QueryCategory } from "../../models/routing.ts";
+import { QueryCategory } from "../../domain/models/routing.ts";
 import { searchAdapterRegistry } from "./registry.ts";
 
 interface StackExchangeSearchParams {

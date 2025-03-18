@@ -1,6 +1,6 @@
 import { err, ok, Result } from "neverthrow";
 import { SearchAdapter } from "./searchAdapter.ts";
-import { QueryCategory } from "../../models/routing.ts";
+import { QueryCategory } from "../../domain/models/routing.ts";
 
 /**
  * Registry for search adapters, manages adapter registration and selection
