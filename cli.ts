@@ -13,33 +13,87 @@ import { SearchService } from "./src/services/searchService.ts";
 import { RoutingService } from "./src/services/routingService.ts";
 import { createMcpServer, startMcpStdioServer } from "./src/services/mcpService.ts";
 import { QueryClassifierService } from "./src/services/queryClassifierService.ts";
-
-// Load API keys from environment variables
-const apiKeys = loadApiKeys();
+import { err, ok, Result, ResultAsync } from "neverthrow";
 
 const encoder = new TextEncoder();
 const logToStderr = (message: string) => {
   Deno.stderr.writeSync(encoder.encode(message + "\n"));
 };
 
-try {
-  // Initialize all available adapters
-  initializeAdapters(apiKeys);
+type SetupError = {
+  type: "setup";
+  message: string;
+};
 
-  const queryClassifier = new QueryClassifierService();
-  const routingService = new RoutingService(queryClassifier);
-  const searchService = new SearchService(routingService);
+type ServerError = {
+  type: "server";
+  message: string;
+};
 
-  // Create and start MCP server
-  const mcpServer = createMcpServer(searchService);
+type CliError = SetupError | ServerError;
 
-  logToStderr("Starting ResearchMCP server...");
-  logToStderr("Server capabilities:");
-  logToStderr("- search tool: enabled");
-  logToStderr("- resources: minimal implementation");
-  logToStderr("- prompts: minimal implementation");
-  await startMcpStdioServer(mcpServer);
-} catch (error) {
-  logToStderr(`Fatal error: ${error}`);
-  Deno.exit(1);
+function setupServices(): Result<SearchService, CliError> {
+  try {
+    const apiKeys = loadApiKeys();
+
+    initializeAdapters(apiKeys);
+
+    const queryClassifier = new QueryClassifierService();
+    const routingService = new RoutingService(queryClassifier);
+    const searchService = new SearchService(routingService);
+
+    return ok(searchService);
+  } catch (error) {
+    return err({
+      type: "setup",
+      message: `Failed to setup services: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    });
+  }
 }
+
+function startServer(): ResultAsync<void, CliError> {
+  const serviceResult = setupServices();
+
+  return serviceResult.match(
+    (searchService) => {
+      logToStderr("Starting ResearchMCP server...");
+      logToStderr("Server capabilities:");
+      logToStderr("- search tool: enabled");
+      logToStderr("- resources: minimal implementation");
+      logToStderr("- prompts: minimal implementation");
+
+      const mcpServer = createMcpServer(searchService);
+
+      return ResultAsync.fromPromise(
+        startMcpStdioServer(mcpServer),
+        (error) => ({
+          type: "server",
+          message: `Server error: ${error instanceof Error ? error.message : String(error)}`,
+        }),
+      );
+    },
+    (error) =>
+      ResultAsync.fromPromise(
+        Promise.resolve(undefined),
+        () => ({
+          type: "server",
+          message: `Error from setup: ${error.message}`,
+        }),
+      ),
+  );
+}
+
+startServer()
+  .then((result) => {
+    result.match(
+      () => {
+        // Do nothing on normal termination
+      },
+      (error) => {
+        logToStderr(`Fatal error: ${error.message}`);
+        Deno.exit(1);
+      },
+    );
+  });
