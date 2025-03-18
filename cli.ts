@@ -7,12 +7,9 @@
  * Available for use from MCP clients such as Claude Desktop.
  */
 
-import { loadApiKeys } from "./src/setup/env.ts";
-import { initializeAdapters } from "./src/setup/adapters.ts";
-import { SearchService } from "./src/services/searchService.ts";
-import { RoutingService } from "./src/services/routingService.ts";
-import { createMcpServer, startMcpStdioServer } from "./src/services/mcpService.ts";
-import { QueryClassifierService } from "./src/services/queryClassifierService.ts";
+import { loadApiKeys } from "./src/config/env.ts";
+import { initializeAdapters } from "./src/config/adapters.ts";
+import { DependencyInjection } from "./src/application/di/DependencyInjection.ts";
 import { err, fromThrowable, ok, Result, ResultAsync } from "neverthrow";
 
 const encoder = new TextEncoder();
@@ -32,14 +29,16 @@ type ServerError = {
 
 type CliError = SetupError | ServerError;
 
-function setupServices(): Result<SearchService, CliError> {
+/**
+ * Setup the dependency injection container
+ */
+function setupDependencyInjection(): Result<DependencyInjection, CliError> {
+  // Load API keys
   const loadApiKeysResult = fromThrowable(
     loadApiKeys,
     (error): CliError => ({
       type: "setup",
-      message: `Failed to setup services: ${
-        error instanceof Error ? error.message : String(error)
-      }`,
+      message: `Failed to load API keys: ${error instanceof Error ? error.message : String(error)}`,
     }),
   )();
 
@@ -49,6 +48,7 @@ function setupServices(): Result<SearchService, CliError> {
 
   const apiKeys = loadApiKeysResult.value;
 
+  // Initialize adapters
   const initAdaptersResult = fromThrowable(
     () => initializeAdapters(apiKeys),
     (error): CliError => ({
@@ -63,28 +63,29 @@ function setupServices(): Result<SearchService, CliError> {
     return err(initAdaptersResult.error);
   }
 
-  const queryClassifier = new QueryClassifierService();
-  const routingService = new RoutingService(queryClassifier);
-  const searchService = new SearchService(routingService);
+  // Create dependency injection container
+  const adapterContainer = initAdaptersResult.value;
+  const di = DependencyInjection.fromAdapterContainer(adapterContainer);
 
-  return ok(searchService);
+  return ok(di);
 }
 
+/**
+ * Start the MCP server
+ */
 function startServer(): ResultAsync<void, CliError> {
-  const serviceResult = setupServices();
+  const diResult = setupDependencyInjection();
 
-  return serviceResult.match(
-    (searchService) => {
+  return diResult.match(
+    (di) => {
       logToStderr("Starting ResearchMCP server...");
       logToStderr("Server capabilities:");
       logToStderr("- search tool: enabled");
       logToStderr("- resources: minimal implementation");
       logToStderr("- prompts: minimal implementation");
 
-      const mcpServer = createMcpServer(searchService);
-
       return ResultAsync.fromPromise(
-        startMcpStdioServer(mcpServer).then((result) =>
+        di.startMcpServer().then((result) =>
           result.match(
             () => undefined,
             (e) => {
@@ -109,6 +110,7 @@ function startServer(): ResultAsync<void, CliError> {
   );
 }
 
+// Start the server
 startServer()
   .then((result) => {
     result.match(
