@@ -1,7 +1,7 @@
 import { err, ok, Result } from "neverthrow";
 import { SearchService } from "./searchService.ts";
 import { ClaudeAdapter, ClaudeMessage } from "../adapters/claude/claudeAdapter.ts";
-import { McpError, McpRequest, McpResult } from "../models/mcp.ts";
+import { McpError, McpRequest, McpResult, McpServerError } from "../models/mcp.ts";
 import { ClaudeResponseType } from "../models/claude.ts";
 import { getErrorSafe, getValueSafe } from "../utils/resultUtils.ts";
 import {
@@ -155,29 +155,32 @@ export class ResearchService {
   }
 
   private parseJsonContent(content: string): Result<ClaudeResponseType, McpError> {
-    let parsedData: unknown;
-    
+    return this.safeJsonParse(content).andThen(parsedData => {
+      if (!isClaudeResponseType(parsedData)) {
+        const serverError: McpServerError = {
+          type: "server",
+          message: "Claude response does not match expected format",
+          details: undefined
+        };
+        return err(serverError);
+      }
+      return ok(parsedData);
+    });
+  }
+  
+  private safeJsonParse(text: string): Result<unknown, McpError> {
     try {
-      parsedData = JSON.parse(content);
+      return ok(JSON.parse(text));
     } catch (error) {
-      return err({
+      const serverError: McpServerError = {
         type: "server",
         message: `Failed to parse JSON from Claude response: ${
           error instanceof Error ? error.message : "Invalid JSON"
         }`,
         details: undefined
-      });
+      };
+      return err(serverError);
     }
-    
-    if (!isClaudeResponseType(parsedData)) {
-      return err({
-        type: "server",
-        message: "Claude response does not match expected format",
-        details: undefined
-      });
-    }
-    
-    return ok(parsedData);
   }
 
   private buildAnalysisPrompt(query: string, results: ReadonlyArray<McpResult>): string {
