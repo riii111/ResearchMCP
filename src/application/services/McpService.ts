@@ -3,8 +3,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio";
 import { z } from "zod";
-import { SearchUseCase } from "../../ports/in/SearchUseCase.ts";
-import { McpResult } from "../../../domain/models/mcp.ts";
+import { SearchUseCase } from "../ports/in/SearchUseCase.ts";
+import { McpResult } from "../../domain/models/mcp.ts";
 import { err, ok, Result } from "neverthrow";
 
 export function createMcpServer(searchService: SearchUseCase): McpServer {

@@ -1,16 +1,16 @@
 import { Hono } from "hono";
-import { SearchUseCase } from "../ports/in/SearchUseCase.ts";
-import { SearchRepository } from "../ports/out/SearchRepository.ts";
-import { CacheRepository } from "../ports/out/CacheRepository.ts";
-import { QueryClassifierPort } from "../ports/out/QueryClassifierPort.ts";
-import { SearchService } from "../services/search/SearchService.ts";
-import { RoutingService } from "../services/search/RoutingService.ts";
+import { SearchUseCase } from "../application/ports/in/SearchUseCase.ts";
+import { SearchRepository } from "../application/ports/out/SearchRepository.ts";
+import { CacheRepository } from "../application/ports/out/CacheRepository.ts";
+import { QueryClassifierPort } from "../application/ports/out/QueryClassifierPort.ts";
+import { SearchService } from "../application/services/SearchService.ts";
+import { RoutingService } from "../application/services/RoutingService.ts";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
-import { createMcpRouter, McpController } from "../../adapters/in/mcp/index.ts";
-import { SearchController } from "../../adapters/in/http/index.ts";
+import { createMcpRouter, McpController } from "../adapters/in/mcp/index.ts";
+import { SearchController } from "../adapters/in/http/index.ts";
 import { err, ok, Result } from "neverthrow";
-import { AdapterContainer } from "../../config/adapters.ts";
+import { AdapterContainer } from "./adapters.ts";
 
 export class DependencyInjection {
   private searchRepositories: SearchRepository[] = [];

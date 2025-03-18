@@ -9,7 +9,7 @@
 
 import { loadApiKeys } from "./src/config/env.ts";
 import { initializeAdapters } from "./src/config/adapters.ts";
-import { DependencyInjection } from "./src/application/di/DependencyInjection.ts";
+import { DependencyInjection } from "./src/config/DependencyInjection.ts";
 import { err, fromThrowable, ok, Result, ResultAsync } from "neverthrow";
 
 const encoder = new TextEncoder();

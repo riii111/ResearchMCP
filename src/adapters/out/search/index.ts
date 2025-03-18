@@ -6,3 +6,4 @@ export * from "./GithubAdapter.ts";
 export * from "./StackExchangeAdapter.ts";
 export * from "./TavilySearchAdapter.ts";
 export * from "./WikipediaAdapter.ts";
+export * from "./QueryClassifierAdapter.ts";

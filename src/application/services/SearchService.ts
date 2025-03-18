@@ -4,9 +4,9 @@ import {
   SearchError,
   SearchResponse,
   SearchResult,
-} from "../../../domain/models/search.ts";
-import { McpError, McpRequest, McpResponse, McpResult } from "../../../domain/models/mcp.ts";
-import { SearchUseCase } from "../../ports/in/SearchUseCase.ts";
+} from "../../domain/models/search.ts";
+import { McpError, McpRequest, McpResponse, McpResult } from "../../domain/models/mcp.ts";
+import { SearchUseCase } from "../ports/in/SearchUseCase.ts";
 import { RoutingService } from "./RoutingService.ts";
 
 /**
