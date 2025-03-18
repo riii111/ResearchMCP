@@ -12,6 +12,7 @@ import { SearchService } from "./src/services/searchService.ts";
 import { ResearchService } from "./src/services/researchService.ts";
 import { createMcpRouter } from "./src/routes/mcp.ts";
 import { createResearchRouter } from "./src/routes/research.ts";
+import { ApiError, createErrorResponse } from "./src/utils/errors.ts";
 
 const apiKeys = loadApiKeys();
 const port = getServerPort();
@@ -42,12 +43,25 @@ if (adapters.claude) {
 }
 
 app.notFound((c) => {
-  return c.json({ message: "Not Found" }, 404);
+  return c.json(createErrorResponse("Not Found"), { status: 404 });
 });
 
 app.onError((err, c) => {
-  console.error(`${err}`);
-  return c.json({ message: "Internal Server Error" }, 500);
+  console.error(`Error: ${err}`);
+
+  if (err instanceof ApiError) {
+    return c.json(
+      createErrorResponse(err.message, err.details),
+      { status: err.status },
+    );
+  }
+
+  // Unhandled error
+  const message = err instanceof Error ? err.message : "Internal Server Error";
+  return c.json(
+    createErrorResponse(message),
+    { status: 500 },
+  );
 });
 
 console.log(`Server running on http://localhost:${port}`);

@@ -1,3 +1,5 @@
+import { ApiErrorResponse, DomainError, DomainErrorType } from "../utils/errors.ts";
+
 export interface McpRequest {
   readonly query: string;
   readonly context?: ReadonlyArray<string>;
@@ -21,11 +23,8 @@ export interface McpSuccessResponse {
   readonly source?: string;
 }
 
-export interface McpErrorResponse {
+export interface McpErrorResponse extends ApiErrorResponse<ReadonlyArray<McpResult>> {
   readonly results: ReadonlyArray<McpResult>;
-  readonly status: "error";
-  readonly message: string;
-  readonly error?: string;
 }
 
 export interface McpResult {
@@ -36,7 +35,27 @@ export interface McpResult {
   readonly source?: string;
 }
 
-export type McpError =
-  | { type: "validation"; message: string }
-  | { type: "search"; details: string }
-  | { type: "server"; message: string };
+export type McpErrorType = Extract<DomainErrorType, "validation" | "search" | "server"> | "parse";
+
+export interface McpError extends DomainError {
+  type: McpErrorType;
+}
+
+export type McpValidationError = McpError & { type: "validation"; message: string };
+export type McpSearchError = McpError & { type: "search"; details: string };
+export type McpServerError = McpError & { type: "server"; message: string };
+export type McpParseError = McpError & { type: "parse"; message: string };
+
+export function createMcpErrorResponse(
+  message: string,
+  error?: unknown,
+  results: ReadonlyArray<McpResult> = [],
+): McpErrorResponse {
+  return {
+    status: "error",
+    message,
+    error,
+    data: results,
+    results,
+  };
+}
