@@ -55,55 +55,73 @@ export class AnthropicClaudeAdapter implements ClaudeAdapter {
   private async executeRequest(
     request: ClaudeRequest,
   ): Promise<Result<ClaudeResponse, ClaudeError>> {
-    try {
-      const response = await fetch(CLAUDE_API_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": this.apiKey,
-          "anthropic-version": "2023-06-01",
-        },
-        body: JSON.stringify({
-          model: request.model || DEFAULT_MODEL,
-          messages: request.messages,
-          max_tokens: request.max_tokens || 1024,
-          temperature: request.temperature || 0.7,
-          system: request.system,
-        }),
-      });
+    const requestOptions = {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": this.apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: request.model || DEFAULT_MODEL,
+        messages: request.messages,
+        max_tokens: request.max_tokens || 1024,
+        temperature: request.temperature || 0.7,
+        system: request.system,
+      }),
+    };
 
-      if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
-          return err({
-            type: "authorization",
-            message: `API Key authentication error: ${response.status}`,
-          });
+    return await fetch(CLAUDE_API_URL, requestOptions)
+      .then((response) => {
+        if (!response.ok) {
+          if (response.status === 401 || response.status === 403) {
+            return err<ClaudeResponse, ClaudeError>({
+              type: "authorization",
+              message: `API Key authentication error: ${response.status}`,
+            });
+          }
+
+          if (response.status === 429) {
+            const retryAfter = response.headers.get("retry-after");
+            const retryMs = retryAfter ? parseInt(retryAfter) * 1000 : 60000;
+            return err<ClaudeResponse, ClaudeError>({
+              type: "rate_limit",
+              retryAfter: retryMs,
+            });
+          }
+
+          return response.json()
+            .then((errorData) =>
+              err<ClaudeResponse, ClaudeError>({
+                type: "validation",
+                message: `API error: ${response.status} - ${
+                  errorData.error?.message || "Unknown error"
+                }`,
+              })
+            )
+            .catch(() =>
+              err<ClaudeResponse, ClaudeError>({
+                type: "validation",
+                message: `API error: ${response.status} - Could not parse error response`,
+              })
+            );
         }
 
-        if (response.status === 429) {
-          const retryAfter = response.headers.get("retry-after");
-          const retryMs = retryAfter ? parseInt(retryAfter) * 1000 : 60000;
-          return err({
-            type: "rate_limit",
-            retryAfter: retryMs,
-          });
-        }
-
-        const errorData = await response.json();
-        return err({
-          type: "validation",
-          message: `API error: ${response.status} - ${errorData.error?.message || "Unknown error"}`,
-        });
-      }
-
-      const data = await response.json() as ClaudeResponse;
-      return ok(data);
-    } catch (error) {
-      return err({
-        type: "network",
-        message: error instanceof Error ? error.message : "Unknown network error",
-      });
-    }
+        return response.json()
+          .then((data) => ok<ClaudeResponse, ClaudeError>(data as ClaudeResponse))
+          .catch(() =>
+            err<ClaudeResponse, ClaudeError>({
+              type: "validation",
+              message: "Failed to parse API response",
+            })
+          );
+      })
+      .catch((error) =>
+        err<ClaudeResponse, ClaudeError>({
+          type: "network",
+          message: error instanceof Error ? error.message : "Unknown network error",
+        })
+      );
   }
 
   private async executeWithBackoff<T, E>(
@@ -137,7 +155,6 @@ export class AnthropicClaudeAdapter implements ClaudeAdapter {
   }
 
   private calculateBackoff(attempt: number): number {
-    // Exponential backoff with jitter
     const exponentialBackoff = INITIAL_BACKOFF_MS * Math.pow(2, attempt - 1);
     const jitter = Math.random() * 0.3 * exponentialBackoff;
     return exponentialBackoff + jitter;

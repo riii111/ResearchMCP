@@ -169,18 +169,18 @@ export class ResearchService {
   }
   
   private safeJsonParse(text: string): Result<unknown, McpError> {
-    try {
-      return ok(JSON.parse(text));
-    } catch (error) {
-      const serverError: McpServerError = {
-        type: "server",
-        message: `Failed to parse JSON from Claude response: ${
-          error instanceof Error ? error.message : "Invalid JSON"
-        }`,
-        details: undefined
-      };
-      return err(serverError);
-    }
+    const serverError: McpServerError = {
+      type: "server",
+      message: "Failed to parse JSON from Claude response",
+      details: undefined
+    };
+    
+    const parseJSON = Result.fromThrowable(
+      JSON.parse,
+      () => serverError
+    );
+    
+    return parseJSON(text);
   }
 
   private buildAnalysisPrompt(query: string, results: ReadonlyArray<McpResult>): string {
