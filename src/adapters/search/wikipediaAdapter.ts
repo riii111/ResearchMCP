@@ -2,7 +2,6 @@ import { err, ok, Result } from "neverthrow";
 import { QueryParams, SearchError, SearchResponse, SearchResult } from "../../models/search.ts";
 import { CacheAdapter } from "../cache/cacheAdapter.ts";
 import { createSearchCacheKey, SearchAdapter } from "./searchAdapter.ts";
-import { getValueSafe } from "../../utils/resultUtils.ts";
 import { QueryCategory } from "../../models/routing.ts";
 import { searchAdapterRegistry } from "./registry.ts";
 
@@ -55,16 +54,18 @@ export class WikipediaAdapter implements SearchAdapter {
     if (this.cache) {
       const cacheKey = createSearchCacheKey(params, this.id);
       const cacheResult = await this.cache.get<SearchResponse>(cacheKey);
-
-      if (cacheResult.isOk()) {
-        const cachedValue = getValueSafe(cacheResult);
-        if (cachedValue) {
-          return ok(cachedValue);
-        }
-      }
+      
+      return cacheResult.match(
+        cachedValue => cachedValue ? ok(cachedValue) : this.fetchAndCacheResults(params),
+        () => this.fetchAndCacheResults(params)
+      );
     }
 
-    return await this.executeSearch(params);
+    return this.fetchAndCacheResults(params);
+  }
+  
+  private fetchAndCacheResults(params: QueryParams): Promise<Result<SearchResponse, SearchError>> {
+    return this.executeSearch(params);
   }
 
   getRelevanceScore(_query: string, category: QueryCategory): number {
@@ -100,30 +101,40 @@ export class WikipediaAdapter implements SearchAdapter {
 
     try {
       const response = await fetch(apiUrl);
-
+      
       if (!response.ok) {
         return err({
           type: "network",
           message: `Wikipedia API error: ${response.status} ${response.statusText}`,
         });
       }
-
-      const wikipediaResponse = await response.json() as WikipediaSearchResponse;
+      
+      let wikipediaResponse;
+      try {
+        wikipediaResponse = await response.json();
+      } catch {
+        return err({
+          type: "network",
+          message: "Failed to parse API response",
+        });
+      }
+      
       const searchResponse = this.mapWikipediaResponseToSearchResponse(
-        wikipediaResponse,
+        wikipediaResponse as WikipediaSearchResponse,
         params,
         startTime,
       );
-
+      
       if (this.cache) {
         const cacheKey = createSearchCacheKey(params, this.id);
-        await this.cache.set(cacheKey, searchResponse, DEFAULT_CACHE_TTL_MS);
+        this.cache.set(cacheKey, searchResponse, DEFAULT_CACHE_TTL_MS)
+          .catch(() => {}); // Ignore cache errors
       }
-
+      
       return ok(searchResponse);
     } catch (error) {
       return err({
-        type: "network",
+        type: "network", 
         message: error instanceof Error ? error.message : "Unknown error",
       });
     }
