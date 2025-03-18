@@ -150,7 +150,7 @@ export class GitHubAdapter implements SearchAdapter {
         };
 
         if (this.cache) {
-          this.cacheSearchResults(params, searchResponse);
+          void this.cacheSearchResults(params, searchResponse);
         }
 
         return ok(searchResponse);
@@ -168,11 +168,11 @@ export class GitHubAdapter implements SearchAdapter {
     };
 
     const url = new URL("https://api.github.com/search/repositories");
-    Object.entries(searchParams).forEach(([key, value]) => {
+    for (const [key, value] of Object.entries(searchParams)) {
       if (value !== undefined) {
-        url.searchParams.append(key, String(value));
+        void url.searchParams.append(key, String(value));
       }
-    });
+    }
 
     return this.fetchGitHubData(url.toString(), "repository search")
       .andThen((data) => {
@@ -207,11 +207,11 @@ export class GitHubAdapter implements SearchAdapter {
     };
 
     const url = new URL("https://api.github.com/search/code");
-    Object.entries(searchParams).forEach(([key, value]) => {
+    for (const [key, value] of Object.entries(searchParams)) {
       if (value !== undefined) {
-        url.searchParams.append(key, String(value));
+        void url.searchParams.append(key, String(value));
       }
-    });
+    }
 
     return this.fetchGitHubData(url.toString(), "code search")
       .andThen((data) => {
@@ -309,14 +309,15 @@ export class GitHubAdapter implements SearchAdapter {
     });
   }
 
-  private cacheSearchResults(
+  private async cacheSearchResults(
     params: QueryParams,
     searchResponse: SearchResponse,
-  ): void {
+  ): Promise<void> {
     const cacheKey = createSearchCacheKey(params, this.id);
-    this.cache!.set(cacheKey, searchResponse, DEFAULT_CACHE_TTL_MS)
-      .then(() => {})
-      .catch(() => {}); // Ignore cache errors
+    // Catch and ignore cache errors with .then().catch() pattern
+    await this.cache!.set(cacheKey, searchResponse, DEFAULT_CACHE_TTL_MS)
+      .then(() => {/* successful cache set */})
+      .catch(() => {/* ignore cache errors */});
   }
 }
 
@@ -325,5 +326,5 @@ export function registerGitHubAdapter(
   cache?: CacheAdapter,
 ): void {
   const adapter = new GitHubAdapter(token, cache);
-  searchAdapterRegistry.register(adapter);
+  void searchAdapterRegistry.register(adapter);
 }

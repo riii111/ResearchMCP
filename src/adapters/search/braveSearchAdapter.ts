@@ -313,5 +313,5 @@ export function registerBraveSearchAdapter(
   cache?: CacheAdapter,
 ): void {
   const adapter = new BraveSearchAdapter(apiKey, cache);
-  searchAdapterRegistry.register(adapter);
+  void searchAdapterRegistry.register(adapter);
 }

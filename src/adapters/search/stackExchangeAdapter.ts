@@ -165,11 +165,11 @@ class StackExchangeRequestBuilder {
 
   build(): URL {
     const url = new URL(this.baseUrl);
-    Object.entries(this.params).forEach(([key, value]) => {
+    for (const [key, value] of Object.entries(this.params)) {
       if (value !== undefined) {
-        url.searchParams.append(key, String(value));
+        void url.searchParams.append(key, String(value));
       }
-    });
+    }
     return url;
   }
 
@@ -191,6 +191,10 @@ export class StackExchangeAdapter implements SearchAdapter {
     "technical",
     "qa",
   ];
+
+  private logError(message: string): void {
+    void Deno.stderr.writeSync(new TextEncoder().encode(`[StackExchangeAdapter] ${message}\n`));
+  }
 
   constructor(
     private readonly apiKey?: string,
@@ -242,13 +246,13 @@ export class StackExchangeAdapter implements SearchAdapter {
     );
 
     if (this.cache) {
-      this.cacheSearchResults(params, searchResponse)
-        .then((result) =>
-          result.match(
+      void this.cacheSearchResults(params, searchResponse)
+        .then((result) => {
+          void result.match(
             () => {}, // do nothing on success
-            (error) => console.error(`Failed to cache Stack Exchange results: ${error.message}`),
-          )
-        );
+            (error) => void this.logError(`Failed to cache Stack Exchange results: ${error.message}`),
+          );
+        });
     }
 
     return ok(searchResponse);
@@ -316,7 +320,7 @@ export class StackExchangeAdapter implements SearchAdapter {
     startTime: number,
   ): SearchResponse {
     if (data.quota_remaining < 5) {
-      console.error(
+      void this.logError(
         `StackExchange API quota is low: ${data.quota_remaining}/${data.quota_max} remaining`,
       );
     }
@@ -359,5 +363,5 @@ export function registerStackExchangeAdapter(
   site: string = DEFAULT_SITE,
 ): void {
   const adapter = new StackExchangeAdapter(apiKey, cache, site);
-  searchAdapterRegistry.register(adapter);
+  void searchAdapterRegistry.register(adapter);
 }

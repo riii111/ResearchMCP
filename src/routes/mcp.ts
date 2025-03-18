@@ -35,27 +35,39 @@ export function createMcpRouter(searchService: SearchService): Hono {
           details: undefined,
         })
       );
-    if (jsonResult.isErr()) {
-      return c.json(
-        createMcpErrorResponse("Request parsing error", jsonResult.error.message),
-        { status: getErrorStatusCode(jsonResult.error) },
-      );
-    }
 
-    const validationResult = mcpRequestSchema.safeParse(jsonResult.value);
-    if (!validationResult.success) {
-      const validationError: McpError = {
-        type: "validation",
-        message: "Validation error",
-        details: JSON.stringify(validationResult.error.format()),
-      };
-      return c.json(
-        createMcpErrorResponse("Validation error", validationError.details),
-        { status: getErrorStatusCode(validationError) },
-      );
-    }
+    return jsonResult.match(
+      (jsonData) => {
+        const validationResult = mcpRequestSchema.safeParse(jsonData);
+        if (!validationResult.success) {
+          const validationError: McpError = {
+            type: "validation",
+            message: "Validation error",
+            details: JSON.stringify(validationResult.error.format()),
+          };
+          return c.json(
+            createMcpErrorResponse("Validation error", validationError.details),
+            { status: getErrorStatusCode(validationError) },
+          );
+        }
 
-    const searchResult = await searchService.searchMcp(validationResult.data as McpRequest);
+        return processValidatedRequest(c, searchService, validationResult.data as McpRequest);
+      },
+      (parseError) => {
+        return c.json(
+          createMcpErrorResponse("Request parsing error", parseError.message),
+          { status: getErrorStatusCode(parseError) },
+        );
+      },
+    );
+  });
+
+  async function processValidatedRequest(
+    c: Parameters<Hono["post"]>[1],
+    searchService: SearchService,
+    request: McpRequest,
+  ): Promise<Response> {
+    const searchResult = await searchService.searchMcp(request);
     return searchResult.match<Response>(
       (response) => c.json(response as McpSuccessResponse),
       (error) => {
@@ -69,7 +81,7 @@ export function createMcpRouter(searchService: SearchService): Hono {
         );
       },
     );
-  });
+  }
 
   return router;
 }
