@@ -4,6 +4,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio";
 import { z } from "zod";
 import { SearchService } from "./searchService.ts";
 import { McpResult } from "../models/mcp.ts";
+import { err, ok, Result } from "neverthrow";
 
 /**
  * Creates and configures an MCP (Model Context Protocol) server with search capabilities

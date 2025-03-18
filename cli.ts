@@ -93,7 +93,7 @@ function startServer(): ResultAsync<void, CliError> {
     },
     (error) =>
       ResultAsync.fromPromise(
-        Promise.resolve(undefined),
+        Promise.resolve(err(new Error(`Error from setup: ${error.message}`))),
         () => ({
           type: "server",
           message: `Error from setup: ${error.message}`,
