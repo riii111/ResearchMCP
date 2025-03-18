@@ -2,7 +2,6 @@ import { err, Ok, ok, Result } from "neverthrow";
 import { QueryParams, SearchError, SearchResponse, SearchResult } from "../../models/search.ts";
 import { CacheAdapter } from "../cache/cacheAdapter.ts";
 import { createSearchCacheKey, SearchAdapter } from "./searchAdapter.ts";
-import { getValueSafe } from "../../utils/resultUtils.ts";
 import { QueryCategory } from "../../models/routing.ts";
 import { searchAdapterRegistry } from "./registry.ts";
 
@@ -81,18 +80,19 @@ export class GitHubAdapter implements SearchAdapter {
     if (this.cache) {
       const cacheKey = createSearchCacheKey(params, this.id);
       const cacheResult = await this.cache.get<SearchResponse>(cacheKey);
-
-      if (cacheResult.isOk()) {
-        const cachedValue = getValueSafe(cacheResult);
-        if (cachedValue) {
-          return ok(cachedValue);
-        }
-      }
+      
+      return cacheResult.match(
+        cachedValue => cachedValue ? ok(cachedValue) : this.fetchAndCacheResults(params),
+        () => this.fetchAndCacheResults(params)
+      );
     }
 
-    // Determine whether to search repositories or code
+    return this.fetchAndCacheResults(params);
+  }
+  
+  private fetchAndCacheResults(params: QueryParams): Promise<Result<SearchResponse, SearchError>> {
     const searchType = this.determineSearchType(params.q);
-    return await this.executeSearch(params, searchType);
+    return this.executeSearch(params, searchType);
   }
 
   getRelevanceScore(_query: string, category: QueryCategory): number {
