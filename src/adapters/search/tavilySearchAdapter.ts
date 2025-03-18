@@ -57,16 +57,16 @@ export class TavilySearchAdapter implements SearchAdapter {
     if (this.cache) {
       const cacheKey = createSearchCacheKey(params, this.id);
       const cacheResult = await this.cache.get<SearchResponse>(cacheKey);
-      
+
       return cacheResult.match(
-        cachedValue => cachedValue ? ok(cachedValue) : this.fetchAndCacheResults(params),
-        () => this.fetchAndCacheResults(params)
+        (cachedValue) => cachedValue ? ok(cachedValue) : this.fetchAndCacheResults(params),
+        () => this.fetchAndCacheResults(params),
       );
     }
 
     return this.fetchAndCacheResults(params);
   }
-  
+
   private fetchAndCacheResults(params: QueryParams): Promise<Result<SearchResponse, SearchError>> {
     return this.executeSearch(params);
   }
@@ -105,7 +105,7 @@ export class TavilySearchAdapter implements SearchAdapter {
 
     try {
       const response = await fetch(TAVILY_API_ENDPOINT, fetchOptions);
-      
+
       if (!response.ok) {
         if (response.status === 429) {
           return err({
@@ -130,13 +130,13 @@ export class TavilySearchAdapter implements SearchAdapter {
         } catch {
           // Ignore JSON parsing errors
         }
-        
+
         return err({
           type: "network",
           message: errorMessage,
         });
       }
-      
+
       let tavilyResponse;
       try {
         tavilyResponse = await response.json();
@@ -146,18 +146,18 @@ export class TavilySearchAdapter implements SearchAdapter {
           message: "Failed to parse API response",
         });
       }
-      
+
       const searchResponse = this.mapTavilyResponseToSearchResponse(
-        tavilyResponse as TavilySearchResponse, 
-        params
+        tavilyResponse as TavilySearchResponse,
+        params,
       );
-      
+
       if (this.cache) {
         const cacheKey = createSearchCacheKey(params, this.id);
         this.cache.set(cacheKey, searchResponse, DEFAULT_CACHE_TTL_MS)
           .catch(() => {}); // Ignore cache errors
       }
-      
+
       return ok(searchResponse);
     } catch (error) {
       return err({

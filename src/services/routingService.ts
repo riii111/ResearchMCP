@@ -18,7 +18,7 @@ export class RoutingService {
     const categoryResult = params.routing?.category
       ? ok(params.routing.category)
       : this.classifyQuery(params.q);
-    
+
     if (categoryResult.isErr()) {
       // Convert error type to SearchError
       return err({
@@ -26,10 +26,10 @@ export class RoutingService {
         message: categoryResult.error.message,
       });
     }
-    
+
     const category = categoryResult.value;
     const adapters = searchAdapterRegistry.getAdaptersForCategory(category, params.q);
-    
+
     if (adapters.length === 0) {
       return err({
         type: "no_adapter_available",
@@ -62,7 +62,7 @@ export class RoutingService {
     await Promise.resolve();
     // Get the category if not provided
     const categoryResult = category ? ok(category) : this.classifyQuery(params.q);
-    
+
     if (categoryResult.isErr()) {
       // Convert error type to SearchError
       return err({
@@ -70,9 +70,9 @@ export class RoutingService {
         message: categoryResult.error.message,
       });
     }
-    
+
     const resolvedCategory = categoryResult.value;
-    
+
     // Get adapters for this category
     const adapters = searchAdapterRegistry.getAdaptersForCategory(resolvedCategory, params.q);
     if (adapters.length === 0) {
@@ -99,7 +99,9 @@ export class RoutingService {
       encoder.encode(
         `${logHeader} Available adapters: ${
           adapters.map((a) =>
-            `${a.id} (${a.name}, score=${a.getRelevanceScore(params.q, resolvedCategory).toFixed(2)})`
+            `${a.id} (${a.name}, score=${
+              a.getRelevanceScore(params.q, resolvedCategory).toFixed(2)
+            })`
           ).join(", ")
         }\n`,
       ),
@@ -117,8 +119,8 @@ export class RoutingService {
   }
 
   private async executeParallelSearches(
-    adapters: ReturnType<typeof searchAdapterRegistry.getAdaptersForCategory>, 
-    params: QueryParams
+    adapters: ReturnType<typeof searchAdapterRegistry.getAdaptersForCategory>,
+    params: QueryParams,
   ): Promise<Result<SearchResponse, SearchError>> {
     const startTime = Date.now();
     const searchPromises = adapters.map((adapter) => adapter.search(params));
@@ -142,9 +144,9 @@ export class RoutingService {
   }
 
   private mergeSearchResults(
-    successResults: Result<SearchResponse, SearchError>[], 
+    successResults: Result<SearchResponse, SearchError>[],
     params: QueryParams,
-    startTime: number
+    startTime: number,
   ): Result<SearchResponse, SearchError> {
     const mergedResults: SearchResult[] = [];
     const sources: string[] = [];
@@ -179,7 +181,7 @@ export class RoutingService {
 
   private classifyQuery(query: string): Result<QueryCategory, SearchError> {
     return this.queryClassifier.classifyQuery(query)
-      .mapErr(error => ({
+      .mapErr((error) => ({
         type: "classification_error",
         message: error.message,
       }));

@@ -80,16 +80,16 @@ export class GitHubAdapter implements SearchAdapter {
     if (this.cache) {
       const cacheKey = createSearchCacheKey(params, this.id);
       const cacheResult = await this.cache.get<SearchResponse>(cacheKey);
-      
+
       return cacheResult.match(
-        cachedValue => cachedValue ? ok(cachedValue) : this.fetchAndCacheResults(params),
-        () => this.fetchAndCacheResults(params)
+        (cachedValue) => cachedValue ? ok(cachedValue) : this.fetchAndCacheResults(params),
+        () => this.fetchAndCacheResults(params),
       );
     }
 
     return this.fetchAndCacheResults(params);
   }
-  
+
   private fetchAndCacheResults(params: QueryParams): Promise<Result<SearchResponse, SearchError>> {
     const searchType = this.determineSearchType(params.q);
     return this.executeSearch(params, searchType);

@@ -146,7 +146,7 @@ export async function startMcpStdioServer(server: McpServer): Promise<Result<voi
   Deno.stderr.writeSync(
     new TextEncoder().encode("Starting MCP server with stdio transport...\n"),
   );
-  
+
   const transport = new StdioServerTransport();
 
   // Connect to transport - all JSON-RPC messages will use stdout
@@ -157,7 +157,9 @@ export async function startMcpStdioServer(server: McpServer): Promise<Result<voi
     })
     .catch((error: unknown) => {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      Deno.stderr.writeSync(new TextEncoder().encode(`Failed to start MCP server: ${errorMessage}\n`));
+      Deno.stderr.writeSync(
+        new TextEncoder().encode(`Failed to start MCP server: ${errorMessage}\n`),
+      );
       return err(error instanceof Error ? error : new Error(String(error)));
     });
 }

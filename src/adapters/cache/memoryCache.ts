@@ -29,7 +29,7 @@ export class MemoryCacheAdapter implements CacheAdapter {
       value,
       expireAt: Date.now() + ttlMs,
     });
-    
+
     return Promise.resolve(ok(undefined));
   }
 

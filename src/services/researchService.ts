@@ -155,31 +155,31 @@ export class ResearchService {
   }
 
   private parseJsonContent(content: string): Result<ClaudeResponseType, McpError> {
-    return this.safeJsonParse(content).andThen(parsedData => {
+    return this.safeJsonParse(content).andThen((parsedData) => {
       if (!isClaudeResponseType(parsedData)) {
         const serverError: McpServerError = {
           type: "server",
           message: "Claude response does not match expected format",
-          details: undefined
+          details: undefined,
         };
         return err(serverError);
       }
       return ok(parsedData);
     });
   }
-  
+
   private safeJsonParse(text: string): Result<unknown, McpError> {
     const serverError: McpServerError = {
       type: "server",
       message: "Failed to parse JSON from Claude response",
-      details: undefined
+      details: undefined,
     };
-    
+
     const parseJSON = Result.fromThrowable(
       JSON.parse,
-      () => serverError
+      () => serverError,
     );
-    
+
     return parseJSON(text);
   }
 

@@ -60,16 +60,16 @@ export class BraveSearchAdapter implements SearchAdapter {
     if (this.cache) {
       const cacheKey = createSearchCacheKey(params, this.id);
       const cacheResult = await this.cache.get<SearchResponse>(cacheKey);
-      
+
       return cacheResult.match(
-        cachedValue => cachedValue ? ok(cachedValue) : this.fetchAndCacheResults(params),
-        () => this.fetchAndCacheResults(params)
+        (cachedValue) => cachedValue ? ok(cachedValue) : this.fetchAndCacheResults(params),
+        () => this.fetchAndCacheResults(params),
       );
     }
 
     return this.fetchAndCacheResults(params);
   }
-  
+
   private fetchAndCacheResults(params: QueryParams): Promise<Result<SearchResponse, SearchError>> {
     return this.executeWithBackoff(() => this.executeSearch(params));
   }
@@ -102,7 +102,7 @@ export class BraveSearchAdapter implements SearchAdapter {
     });
 
     let response;
-    
+
     try {
       response = await fetch(
         `${BRAVE_API_ENDPOINT}?${urlParams}`,
@@ -130,7 +130,7 @@ export class BraveSearchAdapter implements SearchAdapter {
           ],
         });
       }
-      
+
       return err<SearchResponse, SearchError>({
         type: "network",
         message: error instanceof Error ? error.message : "Unknown error",
@@ -146,7 +146,7 @@ export class BraveSearchAdapter implements SearchAdapter {
         } catch {
           // Ignore text parsing errors
         }
-          
+
         return err<SearchResponse, SearchError>({
           type: "invalidQuery",
           message: "API rejected the query format",
@@ -180,14 +180,14 @@ export class BraveSearchAdapter implements SearchAdapter {
       const data = await response.json();
       const braveResponse = data as BraveSearchResponse;
       const searchResponse = this.mapBraveResponseToSearchResponse(braveResponse, query);
-      
+
       // Store in cache if available (errors in caching are non-critical)
       if (this.cache) {
         const cacheKey = createSearchCacheKey(query, this.id);
         this.cache.set(cacheKey, searchResponse, DEFAULT_CACHE_TTL_MS)
           .catch(() => {}); // Ignore cache errors
       }
-      
+
       return ok<SearchResponse, SearchError>(searchResponse);
     } catch (error) {
       return err<SearchResponse, SearchError>({
@@ -211,14 +211,14 @@ export class BraveSearchAdapter implements SearchAdapter {
       (value) => Promise.resolve(ok(value)),
       async (error) => {
         if (
-          typeof error === "object" && 
-          error !== null && 
+          typeof error === "object" &&
+          error !== null &&
           "type" in error &&
           error.type === "rateLimit"
         ) {
           const typedError = error as { type: string; retryAfterMs?: number };
           const retryAfter = typedError.retryAfterMs || this.calculateBackoff(attempt);
-          
+
           console.error(
             `Rate limited. Retrying in ${retryAfter}ms (attempt ${attempt}/${MAX_RETRY_ATTEMPTS})`,
           );
@@ -226,9 +226,9 @@ export class BraveSearchAdapter implements SearchAdapter {
           await new Promise((resolve) => setTimeout(resolve, retryAfter));
           return this.executeWithBackoff(fn, attempt + 1);
         }
-        
+
         return err(error);
-      }
+      },
     );
   }
 
