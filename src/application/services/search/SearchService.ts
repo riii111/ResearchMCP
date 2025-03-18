@@ -16,10 +16,6 @@ import { RoutingService } from "./RoutingService.ts";
 export class SearchService implements SearchUseCase {
   constructor(private readonly routingService: RoutingService) {}
 
-  async search(params: QueryParams): Promise<Result<SearchResponse, SearchError>> {
-    return await this.routingService.routeAndSearch(params);
-  }
-
   async multiSearch(params: QueryParams): Promise<Result<SearchResponse, SearchError>> {
     return await this.routingService.multiSearch(params);
   }
@@ -41,7 +37,7 @@ export class SearchService implements SearchUseCase {
       routing: {},
     };
 
-    const searchResult = await this.search(queryParams);
+    const searchResult = await this.multiSearch(queryParams);
 
     return searchResult.match<Result<McpResponse, McpError>>(
       (response) => {

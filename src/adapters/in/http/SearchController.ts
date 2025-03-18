@@ -13,20 +13,13 @@ export class SearchController {
     const router = new Hono();
 
     router.get("/search", async (c) => {
-      return this.handleSearchRequest(c, (params) => this.searchUseCase.search(params));
-    });
-
-    router.get("/multi-search", async (c) => {
-      return this.handleSearchRequest(c, (params) => this.searchUseCase.multiSearch(params));
+      return this.handleSearchRequest(c);
     });
 
     return router;
   }
 
-  private async handleSearchRequest(
-    c: Context,
-    searchFn: (params: QueryParams) => Promise<Result<SearchResponse, SearchError>>,
-  ): Promise<Response> {
+  private async handleSearchRequest(c: Context): Promise<Response> {
     const query = c.req.query("q");
     if (!query) {
       return c.json({ error: "Search query is required" }, { status: 400 });
@@ -44,12 +37,10 @@ export class SearchController {
       routing: {},
     };
 
-    const result = await searchFn(params);
+    const result = await this.searchUseCase.multiSearch(params);
 
     return result.match(
-      // Success case
       (response) => c.json(response),
-      // Error case
       (error) => this.handleSearchError(c, error),
     );
   }
