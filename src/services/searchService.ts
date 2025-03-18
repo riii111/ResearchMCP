@@ -30,22 +30,17 @@ export class SearchService {
       });
     }
 
-    const routingOptions: RoutingOptions = {
-      parallel: request.options?.parallel === true,
-    };
+    const routingOptions: RoutingOptions = {};
 
     const queryParams: QueryParams = {
       q: request.query,
-      maxResults: request.options?.maxResults || 10,
+      maxResults: request.options?.maxResults || 20,
       country: request.options?.country,
       language: request.options?.language,
       routing: routingOptions,
     };
 
-    // Use parallel search if requested, otherwise use standard routing
-    const searchResult = routingOptions.parallel
-      ? await this.multiSearch(queryParams)
-      : await this.search(queryParams);
+    const searchResult = await this.search(queryParams);
 
     return searchResult.match<Result<McpResponse, McpError>>(
       (response) => {

@@ -37,18 +37,8 @@ export class RoutingService {
       });
     }
 
-    if (params.routing?.parallel) {
-      return this.multiSearch(params, category);
-    }
-
-    const primaryAdapter = adapters[0];
-    console.error(
-      `[INFO] Using search adapter: ${primaryAdapter.id} (${primaryAdapter.name}) for query: "${
-        params.q.substring(0, 50)
-      }${params.q.length > 50 ? "..." : ""}" (category: ${category})`,
-    );
-
-    return primaryAdapter.search(params);
+    // Always use parallel search
+    return this.multiSearch(params, category);
   }
 
   /**
@@ -82,8 +72,8 @@ export class RoutingService {
       });
     }
 
-    // Use up to 3 adapters for parallel search
-    const selectedAdapters = adapters.slice(0, 3);
+    // Use all available adapters for parallel search
+    const selectedAdapters = adapters;
 
     // Log search details
     const encoder = new TextEncoder();
@@ -169,6 +159,31 @@ export class RoutingService {
 
     const uniqueResults = this.deduplicateResults(mergedResults);
     const sortedResults = this.sortByRelevance(uniqueResults);
+
+    const encoder = new TextEncoder();
+    const logHeader = "[PARALLEL_SEARCH_RESULTS]";
+    Deno.stderr.writeSync(
+      encoder.encode(
+        `${logHeader} Total raw results: ${mergedResults.length}, Unique results after deduplication: ${uniqueResults.length}\n`,
+      ),
+    );
+    Deno.stderr.writeSync(
+      encoder.encode(
+        `${logHeader} Results per source: ${
+          sources.map((source, index) => {
+            const count = successResults[index].isOk()
+              ? successResults[index].value.results.length
+              : 0;
+            return `${source}: ${count}`;
+          }).join(", ")
+        }\n`,
+      ),
+    );
+    Deno.stderr.writeSync(
+      encoder.encode(
+        `${logHeader} Total search time: ${Date.now() - startTime}ms\n`,
+      ),
+    );
 
     return ok({
       query: params,

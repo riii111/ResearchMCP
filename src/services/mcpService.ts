@@ -56,7 +56,6 @@ export function createMcpServer(searchService: SearchService): McpServer {
       country: z.string().length(2).optional(),
       language: z.string().min(2).max(5).optional(),
       freshness: z.enum(["day", "week", "month"]).optional(),
-      parallel: z.boolean().optional(),
     },
     async (params, _extra) => {
       Deno.stderr.writeSync(new TextEncoder().encode(`MCP search request: ${params.query}\n`));
@@ -69,7 +68,6 @@ export function createMcpServer(searchService: SearchService): McpServer {
           country: params.country,
           language: params.language,
           freshness: params.freshness,
-          parallel: params.parallel,
         },
       });
 
