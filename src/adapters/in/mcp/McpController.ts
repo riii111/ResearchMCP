@@ -36,30 +36,23 @@ export class McpController {
 
     router.post("/search", async (c) => {
       try {
-        // Parse JSON request body
         const jsonResult = await this.parseRequestBody(c);
         if (jsonResult.isErr()) {
           return this.handleError(c, jsonResult.error);
         }
 
-        // Validate the request
         const validationResult = this.validateRequest(jsonResult.value);
         if (validationResult.isErr()) {
           return this.handleError(c, validationResult.error);
         }
 
-        // Perform the search
         const searchResult = await this.performSearch(validationResult.value);
 
-        // Handle the result
         return searchResult.match(
-          // Success case
           (response) => c.json(response as McpSuccessResponse),
-          // Error case
           (error) => this.handleError(c, error),
         );
       } catch (error) {
-        // Handle unexpected errors
         console.error("Unexpected error in MCP controller:", error);
         return c.json(
           createMcpErrorResponse("Internal server error", "An unexpected error occurred"),
