@@ -167,16 +167,17 @@ export class TavilySearchAdapter implements SearchAdapter {
     )
       .match(
         (errorData) => {
-          const errorMessage = errorData.detail || errorData.message || `API call error: ${response.status}`;
+          const errorMessage = errorData.detail || errorData.message ||
+            `API call error: ${response.status}`;
           console.error(`API error: ${errorMessage}`);
         },
-        () => { /* Ignore parse errors */ }
+        () => {/* Ignore parse errors */},
       );
-    
+
     // Return a standard error response regardless
     return err<Response, SearchError>({
-      type: "network", 
-      message: `API call error: ${response.status}`
+      type: "network",
+      message: `API call error: ${response.status}`,
     });
   }
 
