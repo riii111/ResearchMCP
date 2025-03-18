@@ -142,6 +142,7 @@ export class StackExchangeAdapter implements SearchAdapter {
         if (response.status === 400) {
           return err({
             type: "invalidQuery",
+            message: "Invalid query format for Stack Exchange API",
             issues: ["Invalid query format for Stack Exchange API"],
           });
         }
@@ -149,6 +150,7 @@ export class StackExchangeAdapter implements SearchAdapter {
         if (response.status === 429) {
           return err({
             type: "rateLimit",
+            message: "Stack Exchange API rate limit exceeded",
             retryAfterMs: 60000, // Default to 1 minute
           });
         }

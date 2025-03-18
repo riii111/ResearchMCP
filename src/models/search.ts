@@ -53,8 +53,8 @@ export interface MultiSearchResponse {
  */
 export type SearchError =
   | { type: "network"; message: string }
-  | { type: "rateLimit"; retryAfterMs: number }
-  | { type: "invalidQuery"; issues: string[] }
+  | { type: "rateLimit"; message: string; retryAfterMs: number }
+  | { type: "invalidQuery"; message: string; issues: string[] }
   | { type: "authorization"; message: string }
   | { type: "classification_error"; message: string }
   | { type: "no_adapter_available"; message: string };

@@ -134,49 +134,46 @@ export class ResearchService {
       });
     }
 
+    const claudeResponse = getValueSafe(response);
+    if (!claudeResponse) {
+      return err({
+        type: "server",
+        message: "Failed to get Claude response",
+      });
+    }
+
+    if (!isValidClaudeResponse(claudeResponse)) {
+      return err({
+        type: "server",
+        message: "Invalid Claude response format",
+      });
+    }
+
+    const content = claudeResponse.content[0].text;
+
+    return this.parseJsonContent(content);
+  }
+
+  private parseJsonContent(content: string): Result<ClaudeResponseType, McpError> {
     try {
-      const claudeResponse = getValueSafe(response);
-      if (!claudeResponse) {
+      const parsedData = JSON.parse(content);
+      
+      if (!isClaudeResponseType(parsedData)) {
         return err({
           type: "server",
-          message: "Failed to get Claude response",
+          message: "Claude response does not match expected format",
+          details: undefined
         });
       }
-
-      if (!isValidClaudeResponse(claudeResponse)) {
-        return err({
-          type: "server",
-          message: "Invalid Claude response format",
-        });
-      }
-
-      const content = claudeResponse.content[0].text;
-
-      try {
-        const parsedData = JSON.parse(content);
-
-        if (!isClaudeResponseType(parsedData)) {
-          return err({
-            type: "server",
-            message: "Claude response does not match expected format",
-          });
-        }
-
-        return ok(parsedData);
-      } catch (parseError) {
-        return err({
-          type: "server",
-          message: `Failed to parse JSON from Claude response: ${
-            parseError instanceof Error ? parseError.message : "Invalid JSON"
-          }`,
-        });
-      }
+      
+      return ok(parsedData);
     } catch (error) {
       return err({
         type: "server",
-        message: `Failed to parse Claude response: ${
-          error instanceof Error ? error.message : "Unknown error"
+        message: `Failed to parse JSON from Claude response: ${
+          error instanceof Error ? error.message : "Invalid JSON"
         }`,
+        details: undefined
       });
     }
   }

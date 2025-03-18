@@ -226,6 +226,7 @@ export class GitHubAdapter implements SearchAdapter {
 
             return err({
               type: "rateLimit",
+              message: "GitHub API rate limit exceeded for repository search",
               retryAfterMs: Math.max(retryAfterMs, 60000), // at least 1 minute
             });
           }
@@ -313,6 +314,7 @@ export class GitHubAdapter implements SearchAdapter {
 
             return err({
               type: "rateLimit",
+              message: "GitHub API rate limit exceeded for code search",
               retryAfterMs: Math.max(retryAfterMs, 60000), // at least 1 minute
             });
           }

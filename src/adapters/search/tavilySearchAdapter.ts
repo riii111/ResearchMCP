@@ -110,6 +110,7 @@ export class TavilySearchAdapter implements SearchAdapter {
         if (response.status === 429) {
           return err({
             type: "rateLimit",
+            message: "Tavily API rate limit exceeded",
             retryAfterMs: 60000, // Default to 1 minute
           });
         }

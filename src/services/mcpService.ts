@@ -57,77 +57,62 @@ export function createMcpServer(searchService: SearchService): McpServer {
       parallel: z.boolean().optional(),
     }).shape,
     async (params, _extra) => {
-      try {
-        Deno.stderr.writeSync(new TextEncoder().encode(`MCP search request: ${params.query}\n`));
+      Deno.stderr.writeSync(new TextEncoder().encode(`MCP search request: ${params.query}\n`));
 
-        const searchResult = await searchService.searchMcp({
-          query: params.query,
-          context: params.context,
-          options: {
-            maxResults: params.maxResults,
-            country: params.country,
-            language: params.language,
-            freshness: params.freshness,
-            parallel: params.parallel,
-          },
-        });
+      const searchResult = await searchService.searchMcp({
+        query: params.query,
+        context: params.context,
+        options: {
+          maxResults: params.maxResults,
+          country: params.country,
+          language: params.language,
+          freshness: params.freshness,
+          parallel: params.parallel,
+        },
+      });
 
-        return searchResult.match(
-          (response) => {
-            return {
-              content: [
-                {
-                  type: "text",
-                  text: formatSearchResults(response.results),
-                },
-              ],
-            };
-          },
-          (error) => {
-            Deno.stderr.writeSync(
-              new TextEncoder().encode(`Search error: ${JSON.stringify(error)}\n`),
-            );
-            let errorMessage = "";
+      return searchResult.match(
+        (response) => {
+          return {
+            content: [
+              {
+                type: "text",
+                text: formatSearchResults(response.results),
+              },
+            ],
+          };
+        },
+        (error) => {
+          Deno.stderr.writeSync(
+            new TextEncoder().encode(`Search error: ${JSON.stringify(error)}\n`),
+          );
+          let errorMessage = "";
 
-            switch (error.type) {
-              case "validation":
-                errorMessage = `Validation error: ${error.message}`;
-                break;
-              case "search":
-                errorMessage = `Search error: ${error.details}`;
-                break;
-              case "server":
-                errorMessage = `Server error: ${error.message}`;
-                break;
-            }
+          switch (error.type) {
+            case "validation":
+              errorMessage = `Validation error: ${error.message}`;
+              break;
+            case "search":
+              errorMessage = `Search error: ${error.details}`;
+              break;
+            case "server":
+              errorMessage = `Server error: ${error.message}`;
+              break;
+            default:
+              errorMessage = `Error: ${error.message || "Unknown error"}`;
+          }
 
-            return {
-              content: [
-                {
-                  type: "text",
-                  text: errorMessage,
-                },
-              ],
-              isError: true,
-            };
-          },
-        );
-      } catch (error) {
-        Deno.stderr.writeSync(
-          new TextEncoder().encode(`Unexpected error in MCP search: ${error}\n`),
-        );
-        return {
-          content: [
-            {
-              type: "text",
-              text: `An unexpected error occurred: ${
-                error instanceof Error ? error.message : "Unknown error"
-              }`,
-            },
-          ],
-          isError: true,
-        };
-      }
+          return {
+            content: [
+              {
+                type: "text",
+                text: errorMessage,
+              },
+            ],
+            isError: true,
+          };
+        },
+      );
     },
   );
 
@@ -157,19 +142,22 @@ function formatSearchResults(results: ReadonlyArray<McpResult>): string {
  * Starts an MCP server with stdio transport
  * @param server MCP server instance
  */
-export async function startMcpStdioServer(server: McpServer): Promise<void> {
-  try {
-    Deno.stderr.writeSync(
-      new TextEncoder().encode("Starting MCP server with stdio transport...\n"),
-    );
-    const transport = new StdioServerTransport();
+export async function startMcpStdioServer(server: McpServer): Promise<Result<void, Error>> {
+  Deno.stderr.writeSync(
+    new TextEncoder().encode("Starting MCP server with stdio transport...\n"),
+  );
+  
+  const transport = new StdioServerTransport();
 
-    // Connect to transport - all JSON-RPC messages will use stdout
-    await server.connect(transport);
-
-    Deno.stderr.writeSync(new TextEncoder().encode("MCP server connected via stdio transport\n"));
-  } catch (error) {
-    Deno.stderr.writeSync(new TextEncoder().encode(`Failed to start MCP server: ${error}\n`));
-    throw error;
-  }
+  // Connect to transport - all JSON-RPC messages will use stdout
+  return await server.connect(transport)
+    .then(() => {
+      Deno.stderr.writeSync(new TextEncoder().encode("MCP server connected via stdio transport\n"));
+      return ok(undefined);
+    })
+    .catch((error: unknown) => {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      Deno.stderr.writeSync(new TextEncoder().encode(`Failed to start MCP server: ${errorMessage}\n`));
+      return err(error instanceof Error ? error : new Error(String(error)));
+    });
 }

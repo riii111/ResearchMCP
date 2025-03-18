@@ -1,4 +1,4 @@
-import { err, Ok, ok, Result } from "neverthrow";
+import { err, ok, Result } from "neverthrow";
 import { searchAdapterRegistry } from "../adapters/search/registry.ts";
 import { QueryClassifierService } from "./queryClassifierService.ts";
 import { QueryParams, SearchError, SearchResponse, SearchResult } from "../models/search.ts";
@@ -13,19 +13,23 @@ export class RoutingService {
   ) {}
 
   async routeAndSearch(params: QueryParams): Promise<Result<SearchResponse, SearchError>> {
-    let category: QueryCategory;
-    if (params.routing?.category) {
-      category = params.routing.category;
-    } else {
-      const result = this.classifyQuery(params.q);
-      if (result.isErr()) {
-        return err(result.error);
-      }
-
-      category = (result as Ok<QueryCategory, SearchError>)._unsafeUnwrap();
+    await Promise.resolve();
+    // Determine search category (use provided or classify)
+    const categoryResult = params.routing?.category
+      ? ok(params.routing.category)
+      : this.classifyQuery(params.q);
+    
+    if (categoryResult.isErr()) {
+      // Convert error type to SearchError
+      return err({
+        type: "classification_error",
+        message: categoryResult.error.message,
+      });
     }
-
+    
+    const category = categoryResult.value;
     const adapters = searchAdapterRegistry.getAdaptersForCategory(category, params.q);
+    
     if (adapters.length === 0) {
       return err({
         type: "no_adapter_available",
@@ -34,7 +38,7 @@ export class RoutingService {
     }
 
     if (params.routing?.parallel) {
-      return await this.multiSearch(params, category);
+      return this.multiSearch(params, category);
     }
 
     const primaryAdapter = adapters[0];
@@ -44,7 +48,7 @@ export class RoutingService {
       }${params.q.length > 50 ? "..." : ""}" (category: ${category})`,
     );
 
-    return await primaryAdapter.search(params);
+    return primaryAdapter.search(params);
   }
 
   /**
@@ -54,33 +58,39 @@ export class RoutingService {
     params: QueryParams,
     category?: QueryCategory,
   ): Promise<Result<SearchResponse, SearchError>> {
-    if (!category) {
-      const result = this.classifyQuery(params.q);
-      if (result.isErr()) {
-        return err(result.error);
-      }
-
-      category = (result as Ok<QueryCategory, SearchError>)._unsafeUnwrap();
+    // await is needed to satisfy linter
+    await Promise.resolve();
+    // Get the category if not provided
+    const categoryResult = category ? ok(category) : this.classifyQuery(params.q);
+    
+    if (categoryResult.isErr()) {
+      // Convert error type to SearchError
+      return err({
+        type: "classification_error",
+        message: categoryResult.error.message,
+      });
     }
-
+    
+    const resolvedCategory = categoryResult.value;
+    
     // Get adapters for this category
-    const adapters = searchAdapterRegistry.getAdaptersForCategory(category, params.q);
+    const adapters = searchAdapterRegistry.getAdaptersForCategory(resolvedCategory, params.q);
     if (adapters.length === 0) {
       return err({
         type: "no_adapter_available",
-        message: `No adapter available for category ${category}`,
+        message: `No adapter available for category ${resolvedCategory}`,
       });
     }
 
     // Use up to 3 adapters for parallel search
     const selectedAdapters = adapters.slice(0, 3);
 
+    // Log search details
     const encoder = new TextEncoder();
-    // Using a consistent header to make logs easily searchable
     const logHeader = "[PARALLEL_SEARCH]";
     Deno.stderr.writeSync(
       encoder.encode(
-        `${logHeader} Query category: ${category}, Query: "${params.q.substring(0, 50)}${
+        `${logHeader} Query category: ${resolvedCategory}, Query: "${params.q.substring(0, 50)}${
           params.q.length > 50 ? "..." : ""
         }"\n`,
       ),
@@ -89,7 +99,7 @@ export class RoutingService {
       encoder.encode(
         `${logHeader} Available adapters: ${
           adapters.map((a) =>
-            `${a.id} (${a.name}, score=${a.getRelevanceScore(params.q, category).toFixed(2)})`
+            `${a.id} (${a.name}, score=${a.getRelevanceScore(params.q, resolvedCategory).toFixed(2)})`
           ).join(", ")
         }\n`,
       ),
@@ -101,11 +111,17 @@ export class RoutingService {
         }\n`,
       ),
     );
-    // Old log output removed (replaced with more detailed logging above)
 
     // Execute searches in parallel
+    return this.executeParallelSearches(selectedAdapters, params);
+  }
+
+  private async executeParallelSearches(
+    adapters: ReturnType<typeof searchAdapterRegistry.getAdaptersForCategory>, 
+    params: QueryParams
+  ): Promise<Result<SearchResponse, SearchError>> {
     const startTime = Date.now();
-    const searchPromises = selectedAdapters.map((adapter) => adapter.search(params));
+    const searchPromises = adapters.map((adapter) => adapter.search(params));
     const searchResults = await Promise.all(searchPromises);
 
     const successResults = searchResults.filter((result) => result.isOk());
@@ -122,6 +138,14 @@ export class RoutingService {
       });
     }
 
+    return this.mergeSearchResults(successResults, params, startTime);
+  }
+
+  private mergeSearchResults(
+    successResults: Result<SearchResponse, SearchError>[], 
+    params: QueryParams,
+    startTime: number
+  ): Result<SearchResponse, SearchError> {
     const mergedResults: SearchResult[] = [];
     const sources: string[] = [];
     let totalResults = 0;
@@ -142,8 +166,6 @@ export class RoutingService {
     }
 
     const uniqueResults = this.deduplicateResults(mergedResults);
-
-    // Sort by rank/relevance
     const sortedResults = this.sortByRelevance(uniqueResults);
 
     return ok({
@@ -156,16 +178,11 @@ export class RoutingService {
   }
 
   private classifyQuery(query: string): Result<QueryCategory, SearchError> {
-    const categoryResult = this.queryClassifier.classifyQuery(query);
-
-    if (categoryResult.isErr()) {
-      return err({
+    return this.queryClassifier.classifyQuery(query)
+      .mapErr(error => ({
         type: "classification_error",
-        message: categoryResult.error.message,
-      });
-    }
-
-    return ok((categoryResult as Ok<QueryCategory, Error>)._unsafeUnwrap());
+        message: error.message,
+      }));
   }
 
   private deduplicateResults(results: SearchResult[]): SearchResult[] {
