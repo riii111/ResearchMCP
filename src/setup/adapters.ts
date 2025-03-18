@@ -27,7 +27,7 @@ export function initializeAdapters(apiKeys: ApiKeys): AdapterContainer {
 
   const encoder = new TextEncoder();
   const log = (message: string) => {
-    Deno.stderr.writeSync(encoder.encode(message + "\n"));
+    void Deno.stderr.writeSync(encoder.encode(message + "\n"));
   };
 
   registerBraveSearchAdapter(apiKeys.brave, container.cache);

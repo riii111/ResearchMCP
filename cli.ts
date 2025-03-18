@@ -17,7 +17,7 @@ import { err, fromThrowable, ok, Result, ResultAsync } from "neverthrow";
 
 const encoder = new TextEncoder();
 const logToStderr = (message: string) => {
-  Deno.stderr.writeSync(encoder.encode(message + "\n"));
+  void Deno.stderr.writeSync(encoder.encode(message + "\n"));
 };
 
 type SetupError = {
@@ -109,15 +109,16 @@ function startServer(): ResultAsync<void, CliError> {
   );
 }
 
-startServer()
-  .then((result) => {
-    result.match(
-      () => {
-        // Do nothing on normal termination
-      },
-      (error) => {
-        logToStderr(`Fatal error: ${error.message}`);
-        Deno.exit(1);
-      },
-    );
-  });
+// Main execution using IIFE to handle promise with match
+void (async () => {
+  const result = await startServer();
+  result.match(
+    () => {
+      // Do nothing on normal termination
+    },
+    (error) => {
+      logToStderr(`Fatal error: ${error.message}`);
+      void Deno.exit(1);
+    },
+  );
+})();

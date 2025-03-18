@@ -17,10 +17,10 @@ export function loadApiKeys(): ApiKeys {
   const braveApiKey = Deno.env.get("BRAVE_API_KEY");
 
   if (!braveApiKey) {
-    Deno.stderr.writeSync(
+    void Deno.stderr.writeSync(
       new TextEncoder().encode("Environment variable BRAVE_API_KEY is not set\n"),
     );
-    Deno.exit(1);
+    void Deno.exit(1);
   }
 
   return {
