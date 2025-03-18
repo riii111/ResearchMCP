@@ -109,7 +109,6 @@ function startServer(): ResultAsync<void, CliError> {
   );
 }
 
-// Main execution using IIFE to handle promise with match
 void (async () => {
   const result = await startServer();
   result.match(
