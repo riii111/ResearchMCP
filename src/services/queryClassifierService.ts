@@ -39,17 +39,11 @@ export class QueryClassifierService {
     return ok("general");
   }
 
-  /**
-   * Check if the query contains any of the given keywords
-   */
   private containsKeywords(query: string, keywords: string[]): boolean {
     const lowerQuery = query.toLowerCase();
     return keywords.some((keyword) => lowerQuery.includes(keyword.toLowerCase()));
   }
 
-  /**
-   * Check if the query is in question format
-   */
   private isQuestionStyle(query: string): boolean {
     const lowerQuery = query.toLowerCase().trim();
 

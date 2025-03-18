@@ -20,7 +20,6 @@ export class RoutingService {
       : this.classifyQuery(params.q);
 
     if (categoryResult.isErr()) {
-      // Convert error type to SearchError
       return err({
         type: "classification_error",
         message: categoryResult.error.message,
@@ -48,13 +47,10 @@ export class RoutingService {
     params: QueryParams,
     category?: QueryCategory,
   ): Promise<Result<SearchResponse, SearchError>> {
-    // await is needed to satisfy linter
     await Promise.resolve();
-    // Get the category if not provided
     const categoryResult = category ? ok(category) : this.classifyQuery(params.q);
 
     if (categoryResult.isErr()) {
-      // Convert error type to SearchError
       return err({
         type: "classification_error",
         message: categoryResult.error.message,
@@ -63,7 +59,6 @@ export class RoutingService {
 
     const resolvedCategory = categoryResult.value;
 
-    // Get adapters for this category
     const adapters = searchAdapterRegistry.getAdaptersForCategory(resolvedCategory, params.q);
     if (adapters.length === 0) {
       return err({
@@ -72,10 +67,8 @@ export class RoutingService {
       });
     }
 
-    // Use all available adapters for parallel search
     const selectedAdapters = adapters;
 
-    // Log search details
     const encoder = new TextEncoder();
     const logHeader = "[PARALLEL_SEARCH]";
     Deno.stderr.writeSync(
@@ -104,7 +97,6 @@ export class RoutingService {
       ),
     );
 
-    // Execute searches in parallel
     return this.executeParallelSearches(selectedAdapters, params);
   }
 
@@ -118,7 +110,6 @@ export class RoutingService {
 
     const successResults = searchResults.filter((result) => result.isOk());
     if (successResults.length === 0) {
-      // If all searches failed, return the first error
       const firstError = searchResults[0];
       if (firstError.isErr()) {
         return firstError;
