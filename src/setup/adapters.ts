@@ -4,7 +4,6 @@ import { registerTavilySearchAdapter } from "../adapters/search/tavilySearchAdap
 import { registerWikipediaAdapter } from "../adapters/search/wikipediaAdapter.ts";
 // import { registerGitHubAdapter } from "../adapters/search/githubAdapter.ts";
 // import { registerStackExchangeAdapter } from "../adapters/search/stackExchangeAdapter.ts";
-import { AnthropicClaudeAdapter } from "../adapters/claude/claudeAdapter.ts";
 import type { ApiKeys } from "./env.ts";
 
 /**
@@ -12,7 +11,6 @@ import type { ApiKeys } from "./env.ts";
  */
 export interface AdapterContainer {
   cache: MemoryCacheAdapter;
-  claude?: AnthropicClaudeAdapter;
 }
 
 /**
@@ -53,14 +51,6 @@ export function initializeAdapters(apiKeys: ApiKeys): AdapterContainer {
 
   // registerStackExchangeAdapter(apiKeys.stackExchange, container.cache);
   // log("StackExchange API integration temporarily disabled");
-
-  // // Initialize Claude API adapter (if API key is provided)
-  // if (apiKeys.claude) {
-  //   container.claude = new AnthropicClaudeAdapter(apiKeys.claude);
-  //   log("Claude API integration enabled");
-  // } else {
-  //   log("Claude API integration disabled (no API key)");
-  // }
 
   return container;
 }

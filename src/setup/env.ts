@@ -6,7 +6,6 @@ export interface ApiKeys {
   tavily?: string;
   github?: string;
   stackExchange?: string;
-  claude?: string;
 }
 
 /**
@@ -28,7 +27,6 @@ export function loadApiKeys(): ApiKeys {
     tavily: Deno.env.get("TAVILY_API_KEY"),
     github: Deno.env.get("GITHUB_API_TOKEN"),
     stackExchange: Deno.env.get("STACKEXCHANGE_API_KEY"),
-    claude: Deno.env.get("CLAUDE_API_KEY"),
   };
 }
 

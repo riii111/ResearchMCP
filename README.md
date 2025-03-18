@@ -19,8 +19,7 @@ DeepResearch.
 2. Clone the repository
 3. Set environment variables
    - `BRAVE_API_KEY`: Brave Search API key
-   - `TAVILY_API_KEY`: Tavily Search API key
-   - `CLAUDE_API_KEY`: Claude API key (optional)
+   - `TAVILY_API_KEY`: Tavily Search API key (optional)
 4. Run the application:
 
    ```bash
@@ -66,7 +65,7 @@ make d-down   # Stop container
    ```json
    {
      "mcpServers": {
-       "BraveSearch": {
+       "MCPSearch": {
          "description": "Web search powered by Brave Search API",
          "command": "/absolute/path/to/ResearchMCP/cli.ts",
          "args": [],
@@ -93,7 +92,6 @@ make d-down   # Stop container
 - **Web Search**: Search the web using Brave Search API through Claude Desktop
 - **MCP Protocol**: Full compliance with the Model Context Protocol
 - **Caching**: Search results are cached to improve performance and reduce API calls
-- **Research**: Enhanced analysis of search results (with Claude API key)
 
 ## Architecture Overview
 
@@ -101,12 +99,10 @@ make d-down   # Stop container
 graph LR
     Claude["Claude Desktop<br>(MCP Client)"]
     BraveAPI["Brave Search API"]
-    ClaudeAPI["Claude API"]
     
     subgraph ResearchMCP["ResearchMCP Server"]
         MCPEndpoint["/mcp/search Endpoint"]
         MCPServer["MCP Server (stdio)"]
-        ResearchEndpoint["/research Endpoint"]
     end
     
     Claude -->|Search| MCPServer
@@ -114,17 +110,12 @@ graph LR
     BraveAPI -->|Results| MCPServer
     MCPServer -->|Response| Claude
     
-    Claude -->|Research| ResearchEndpoint
-    ResearchEndpoint -->|Query| BraveAPI
-    ResearchEndpoint -->|Analyze| ClaudeAPI
-    ResearchEndpoint -->|Response| Claude
-    
     classDef external fill:#f9e6d2,stroke:#333,stroke-width:2px,color:#000
     classDef component fill:#e6f5ed,stroke:#333,color:#000
     classDef container fill:#f5f5f5,stroke:#333,color:#000
     
-    class Claude,BraveAPI,ClaudeAPI external
-    class MCPEndpoint,MCPServer,ResearchEndpoint component
+    class Claude,BraveAPI external
+    class MCPEndpoint,MCPServer component
     class ResearchMCP container
 ```
 

@@ -9,9 +9,7 @@ import { initializeAdapters } from "./src/setup/adapters.ts";
 import { QueryClassifierService } from "./src/services/queryClassifierService.ts";
 import { RoutingService } from "./src/services/routingService.ts";
 import { SearchService } from "./src/services/searchService.ts";
-import { ResearchService } from "./src/services/researchService.ts";
 import { createMcpRouter } from "./src/routes/mcp.ts";
-import { createResearchRouter } from "./src/routes/research.ts";
 import { ApiError, createErrorResponse } from "./src/utils/errors.ts";
 
 const apiKeys = loadApiKeys();
@@ -21,7 +19,7 @@ const app = new Hono();
 app.use(logger());
 app.use(secureHeaders());
 
-const adapters = initializeAdapters(apiKeys);
+initializeAdapters(apiKeys);
 
 const queryClassifier = new QueryClassifierService();
 const routingService = new RoutingService(queryClassifier);
@@ -36,11 +34,6 @@ app.get("/", (c) => {
 });
 
 app.route("/mcp", createMcpRouter(searchService));
-
-if (adapters.claude) {
-  const researchService = new ResearchService(searchService, adapters.claude);
-  app.route("/research", createResearchRouter(researchService));
-}
 
 app.notFound((c) => {
   return c.json(createErrorResponse("Not Found"), { status: 404 });
