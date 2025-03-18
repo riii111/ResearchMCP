@@ -13,7 +13,7 @@ import { SearchService } from "./src/services/searchService.ts";
 import { RoutingService } from "./src/services/routingService.ts";
 import { createMcpServer, startMcpStdioServer } from "./src/services/mcpService.ts";
 import { QueryClassifierService } from "./src/services/queryClassifierService.ts";
-import { err, ok, Result, ResultAsync } from "neverthrow";
+import { err, fromThrowable, ok, Result, ResultAsync } from "neverthrow";
 
 const encoder = new TextEncoder();
 const logToStderr = (message: string) => {
@@ -33,24 +33,41 @@ type ServerError = {
 type CliError = SetupError | ServerError;
 
 function setupServices(): Result<SearchService, CliError> {
-  try {
-    const apiKeys = loadApiKeys();
-
-    initializeAdapters(apiKeys);
-
-    const queryClassifier = new QueryClassifierService();
-    const routingService = new RoutingService(queryClassifier);
-    const searchService = new SearchService(routingService);
-
-    return ok(searchService);
-  } catch (error) {
-    return err({
+  const loadApiKeysResult = fromThrowable(
+    loadApiKeys,
+    (error): CliError => ({
       type: "setup",
       message: `Failed to setup services: ${
         error instanceof Error ? error.message : String(error)
       }`,
-    });
+    }),
+  )();
+
+  if (loadApiKeysResult.isErr()) {
+    return err(loadApiKeysResult.error);
   }
+
+  const apiKeys = loadApiKeysResult.value;
+
+  const initAdaptersResult = fromThrowable(
+    () => initializeAdapters(apiKeys),
+    (error): CliError => ({
+      type: "setup",
+      message: `Failed to initialize adapters: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    }),
+  )();
+
+  if (initAdaptersResult.isErr()) {
+    return err(initAdaptersResult.error);
+  }
+
+  const queryClassifier = new QueryClassifierService();
+  const routingService = new RoutingService(queryClassifier);
+  const searchService = new SearchService(routingService);
+
+  return ok(searchService);
 }
 
 function startServer(): ResultAsync<void, CliError> {
