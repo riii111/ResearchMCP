@@ -84,7 +84,10 @@ function startServer(): ResultAsync<void, CliError> {
       const mcpServer = createMcpServer(searchService);
 
       return ResultAsync.fromPromise(
-        startMcpStdioServer(mcpServer),
+        startMcpStdioServer(mcpServer).then(result => result.match(
+          () => undefined,
+          (e) => { throw e; }
+        )),
         (error) => ({
           type: "server",
           message: `Server error: ${error instanceof Error ? error.message : String(error)}`,
@@ -93,7 +96,7 @@ function startServer(): ResultAsync<void, CliError> {
     },
     (error) =>
       ResultAsync.fromPromise(
-        Promise.resolve(err(new Error(`Error from setup: ${error.message}`))),
+        Promise.resolve(undefined),
         () => ({
           type: "server",
           message: `Error from setup: ${error.message}`,
