@@ -11,9 +11,6 @@ export interface QueryParams {
   readonly routing?: RoutingOptions;
 }
 
-/**
- * Individual search result
- */
 export interface SearchResult {
   readonly id: string;
   readonly title: string;
@@ -37,9 +34,6 @@ export interface SearchResponse {
   readonly source: string;
 }
 
-/**
- * Combined search responses from multiple sources
- */
 export interface MultiSearchResponse {
   readonly query: QueryParams;
   readonly results: ReadonlyArray<SearchResult>;
@@ -48,9 +42,6 @@ export interface MultiSearchResponse {
   readonly sources: ReadonlyArray<string>;
 }
 
-/**
- * Search error types
- */
 export type SearchError =
   | { type: "network"; message: string }
   | { type: "rateLimit"; message: string; retryAfterMs: number }
