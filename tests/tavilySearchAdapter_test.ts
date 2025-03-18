@@ -39,37 +39,35 @@ Deno.test({
 
     setupMockFetch(mockResponse);
 
-    try {
-      const adapter = new TavilySearchAdapter("test-api-key");
-      const result = await adapter.search({
-        q: "test query",
-        maxResults: 5,
-      });
+    const adapter = new TavilySearchAdapter("test-api-key");
+    const result = await adapter.search({
+      q: "test query",
+      maxResults: 5,
+    });
 
-      assertEquals(result.isOk(), true);
+    assertEquals(result.isOk(), true);
 
-      if (result.isOk()) {
-        const response = result.value;
+    if (result.isOk()) {
+      const response = result.value;
 
-        assertEquals(response.source, "tavily");
-        assertEquals(response.results.length, 2); // Answer + 1 result
-        assertEquals(response.totalResults, 2);
+      assertEquals(response.source, "tavily");
+      assertEquals(response.results.length, 2); // Answer + 1 result
+      assertEquals(response.totalResults, 2);
 
-        const answerResult = response.results[0];
-        assertEquals(answerResult.title, "AI Generated Answer");
-        assertEquals(answerResult.sourceType, "ai_answer");
-        assertEquals(answerResult.relevanceScore, 1.0);
+      const answerResult = response.results[0];
+      assertEquals(answerResult.title, "AI Generated Answer");
+      assertEquals(answerResult.sourceType, "ai_answer");
+      assertEquals(answerResult.relevanceScore, 1.0);
 
-        const webResult = response.results[1];
-        assertEquals(webResult.title, "Test Article");
-        assertEquals(webResult.url, "https://example.com/article");
-        assertEquals(webResult.snippet, "This is a test article content");
-        assertEquals(webResult.sourceType, "web");
-        assertExists(webResult.published);
-      }
-    } finally {
-      restoreFetch();
+      const webResult = response.results[1];
+      assertEquals(webResult.title, "Test Article");
+      assertEquals(webResult.url, "https://example.com/article");
+      assertEquals(webResult.snippet, "This is a test article content");
+      assertEquals(webResult.sourceType, "web");
+      assertExists(webResult.published);
     }
+
+    restoreFetch();
   },
 });
 
@@ -78,28 +76,26 @@ Deno.test({
   fn: async () => {
     setupMockFetch({ message: "Invalid API key" }, 401);
 
-    try {
-      const adapter = new TavilySearchAdapter("invalid-api-key");
-      const result = await adapter.search({
-        q: "test query",
-        maxResults: 5,
-      });
+    const adapter = new TavilySearchAdapter("invalid-api-key");
+    const result = await adapter.search({
+      q: "test query",
+      maxResults: 5,
+    });
 
-      assertEquals(result.isErr(), true);
+    assertEquals(result.isErr(), true);
 
-      if (result.isErr()) {
-        const error = result.error;
-        assertEquals(error.type, "authorization");
-        assertEquals(
-          (error as { type: string; message: string }).message.includes(
-            "API Key authentication error",
-          ),
-          true,
-        );
-      }
-    } finally {
-      restoreFetch();
+    if (result.isErr()) {
+      const error = result.error;
+      assertEquals(error.type, "authorization");
+      assertEquals(
+        (error as { type: string; message: string }).message.includes(
+          "API Key authentication error",
+        ),
+        true,
+      );
     }
+
+    restoreFetch();
   },
 });
 

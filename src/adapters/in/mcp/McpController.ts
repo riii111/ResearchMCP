@@ -133,45 +133,50 @@ export class McpController {
     const router = new Hono();
 
     router.post("/search", async (c) => {
-      try {
-        const jsonResult = await this.parseRequestBody(c);
-        if (jsonResult.isErr()) {
-          return this.handleError(c, jsonResult.error);
-        }
-
-        const validationResult = this.validateRequest(jsonResult.value);
-        if (validationResult.isErr()) {
-          return this.handleError(c, validationResult.error);
-        }
-
-        const searchResult = await this.performSearch(validationResult.value);
-
-        return searchResult.match(
-          (response) => c.json(response as McpSuccessResponse),
-          (error) => this.handleError(c, error),
-        );
-      } catch (error) {
-        console.error("Unexpected error in MCP controller:", error);
-        return c.json(
-          createMcpErrorResponse("Internal server error", "An unexpected error occurred"),
-          { status: 500 },
-        );
+      const jsonResult = await this.parseRequestBody(c);
+      if (jsonResult.isErr()) {
+        return this.handleError(c, jsonResult.error);
       }
+
+      const validationResult = this.validateRequest(jsonResult.value);
+      if (validationResult.isErr()) {
+        return this.handleError(c, validationResult.error);
+      }
+
+      const searchResult = await this.performSearch(validationResult.value);
+
+      return searchResult.match(
+        (response) => c.json(response as McpSuccessResponse),
+        (error) => this.handleError(c, error),
+      );
     });
 
     return router;
   }
 
+  private createServerErrorResponse(): McpError {
+    return {
+      type: "server",
+      message: "Internal server error",
+      details: "An unexpected error occurred",
+    };
+  }
+
   private async parseRequestBody(c: Context): Promise<Result<unknown, McpParseError>> {
     return await c.req.json()
       .then((data) => ok(data))
-      .catch((error) =>
-        err<unknown, McpParseError>({
+      .catch((error) => {
+        Deno.stderr.writeSync(
+          new TextEncoder().encode(
+            `JSON parse error: ${error instanceof Error ? error.message : "Unknown error"}\n`,
+          ),
+        );
+        return err<unknown, McpParseError>({
           type: "parse",
           message: error instanceof Error ? error.message : "Unknown error",
           details: undefined,
-        })
-      );
+        });
+      });
   }
 
   private validateRequest(data: unknown): Result<McpRequest, McpError> {

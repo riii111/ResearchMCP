@@ -66,40 +66,37 @@ Deno.test({
 
     setupMockFetch(mockRepoResponse);
 
-    try {
-      const adapter = new GitHubAdapter("mock-token");
-      const result = await adapter.search({
-        q: "typescript test",
-        maxResults: 5,
-      });
+    const adapter = new GitHubAdapter("mock-token");
+    const result = await adapter.search({
+      q: "typescript test",
+      maxResults: 5,
+    });
 
-      assertEquals(result.isOk(), true);
+    assertEquals(result.isOk(), true);
 
-      if (result.isOk()) {
-        const response = result.value;
+    if (result.isOk()) {
+      const response = result.value;
 
-        assertEquals(response.source, "github");
-        assertEquals(response.results.length, 2);
-        assertEquals(response.totalResults, 2);
+      assertEquals(response.source, "github");
+      assertEquals(response.results.length, 2);
+      assertEquals(response.totalResults, 2);
 
-        const firstResult = response.results[0];
-        assertEquals(firstResult.title, "test-user/test-repo");
-        assertEquals(firstResult.url, "https://github.com/test-user/test-repo");
-        assertEquals(firstResult.snippet, "A test repository");
-        assertEquals(firstResult.sourceType, "repository");
-        assertExists(firstResult.published);
+      const firstResult = response.results[0];
+      assertEquals(firstResult.title, "test-user/test-repo");
+      assertEquals(firstResult.url, "https://github.com/test-user/test-repo");
+      assertEquals(firstResult.snippet, "A test repository");
+      assertEquals(firstResult.sourceType, "repository");
+      assertExists(firstResult.published);
 
-        const secondResult = response.results[1];
-        assertEquals(secondResult.title, "test-org/another-repo");
-        assertEquals(
-          secondResult.relevanceScore !== undefined && firstResult.relevanceScore !== undefined &&
-            secondResult.relevanceScore > firstResult.relevanceScore,
-          true,
-        );
-      }
-    } finally {
-      restoreFetch();
+      const secondResult = response.results[1];
+      assertEquals(
+        secondResult.relevanceScore !== undefined && firstResult.relevanceScore !== undefined &&
+          secondResult.relevanceScore > firstResult.relevanceScore,
+        true,
+      );
     }
+
+    restoreFetch();
   },
 });
 
@@ -145,41 +142,39 @@ Deno.test({
 
     setupMockFetch(mockCodeResponse);
 
-    try {
-      const adapter = new GitHubAdapter("mock-token");
-      const result = await adapter.search({
-        q: "function example typescript",
-        maxResults: 5,
-      });
+    const adapter = new GitHubAdapter("mock-token");
+    const result = await adapter.search({
+      q: "function example typescript",
+      maxResults: 5,
+    });
 
-      assertEquals(result.isOk(), true);
+    assertEquals(result.isOk(), true);
 
-      if (result.isOk()) {
-        const response = result.value;
+    if (result.isOk()) {
+      const response = result.value;
 
-        assertEquals(response.source, "github");
-        assertEquals(response.results.length, 2);
-        assertEquals(response.totalResults, 2);
+      assertEquals(response.source, "github");
+      assertEquals(response.results.length, 2);
+      assertEquals(response.totalResults, 2);
 
-        const firstResult = response.results[0];
-        assertEquals(firstResult.title, "test-user/test-repo: src/main.ts");
-        assertEquals(
-          firstResult.url,
-          "https://github.com/test-user/test-repo/blob/main/src/main.ts",
-        );
-        assertEquals(firstResult.sourceType, "code");
+      const firstResult = response.results[0];
+      assertEquals(firstResult.title, "test-user/test-repo: src/main.ts");
+      assertEquals(
+        firstResult.url,
+        "https://github.com/test-user/test-repo/blob/main/src/main.ts",
+      );
+      assertEquals(firstResult.sourceType, "code");
 
-        const secondResult = response.results[1];
-        assertEquals(secondResult.title, "test-org/another-repo: src/utils/utils.ts");
-        assertEquals(
-          secondResult.relevanceScore !== undefined && firstResult.relevanceScore !== undefined &&
-            secondResult.relevanceScore < firstResult.relevanceScore,
-          true,
-        );
-      }
-    } finally {
-      restoreFetch();
+      const secondResult = response.results[1];
+      assertEquals(secondResult.title, "test-org/another-repo: src/utils/utils.ts");
+      assertEquals(
+        secondResult.relevanceScore !== undefined && firstResult.relevanceScore !== undefined &&
+          secondResult.relevanceScore < firstResult.relevanceScore,
+        true,
+      );
     }
+
+    restoreFetch();
   },
 });
 
@@ -193,23 +188,21 @@ Deno.test({
 
     setupMockFetch({ message: "API rate limit exceeded" }, 403, mockErrorHeaders);
 
-    try {
-      const adapter = new GitHubAdapter("mock-token");
-      const result = await adapter.search({
-        q: "rate limit test",
-        maxResults: 5,
-      });
+    const adapter = new GitHubAdapter("mock-token");
+    const result = await adapter.search({
+      q: "rate limit test",
+      maxResults: 5,
+    });
 
-      assertEquals(result.isErr(), true);
+    assertEquals(result.isErr(), true);
 
-      if (result.isErr()) {
-        const error = result.error;
-        assertEquals(error.type, "rateLimit");
-        assertExists((error as { retryAfterMs: number }).retryAfterMs);
-      }
-    } finally {
-      restoreFetch();
+    if (result.isErr()) {
+      const error = result.error;
+      assertEquals(error.type, "rateLimit");
+      assertExists((error as { retryAfterMs: number }).retryAfterMs);
     }
+
+    restoreFetch();
   },
 });
 
@@ -237,19 +230,17 @@ Deno.test({
       } as Response);
     }) as typeof fetch;
 
-    try {
-      const adapter = new GitHubAdapter("mock-token");
+    const adapter = new GitHubAdapter("mock-token");
 
-      // Try a repository search
-      await adapter.search({ q: "typescript project", maxResults: 5 });
-      assertEquals(capturedUrl.includes("/search/repositories"), true);
+    // Try a repository search
+    await adapter.search({ q: "typescript project", maxResults: 5 });
+    assertEquals(capturedUrl.includes("/search/repositories"), true);
 
-      // Try a code search
-      await adapter.search({ q: "function typescript implementation", maxResults: 5 });
-      assertEquals(capturedUrl.includes("/search/code"), true);
-    } finally {
-      restoreFetch();
-    }
+    // Try a code search
+    await adapter.search({ q: "function typescript implementation", maxResults: 5 });
+    assertEquals(capturedUrl.includes("/search/code"), true);
+
+    restoreFetch();
   },
 });
 

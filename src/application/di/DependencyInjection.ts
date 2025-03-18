@@ -12,10 +12,6 @@ import { SearchController } from "../../adapters/in/http/index.ts";
 import { err, ok, Result } from "neverthrow";
 import { AdapterContainer } from "../../config/adapters.ts";
 
-/**
- * Dependency Injection container for the application
- * Manages the creation and wiring of application components
- */
 export class DependencyInjection {
   private searchRepositories: SearchRepository[] = [];
   private queryClassifier?: QueryClassifierPort;
@@ -150,27 +146,33 @@ export class DependencyInjection {
       encoder.encode("Starting MCP server with stdio transport...\n"),
     );
 
-    try {
-      const server = this.createMcpServer();
-      const transport = new StdioServerTransport();
+    const server = this.createMcpServer();
+    const transport = new StdioServerTransport();
 
-      // Connect to transport - all JSON-RPC messages will use stdout
-      await server.connect(transport);
+    const result = await this.connectToTransport(server, transport);
 
+    if (result.isOk()) {
       Deno.stderr.writeSync(encoder.encode("MCP server connected via stdio transport\n"));
       return ok(undefined);
-    } catch (error) {
+    } else {
+      const error = result.error;
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       Deno.stderr.writeSync(
         encoder.encode(`Failed to start MCP server: ${errorMessage}\n`),
       );
-      return err(error instanceof Error ? error : new Error(String(error)));
+      return err(error);
     }
   }
 
-  /**
-   * Factory method to create a dependency injection container from adapter container
-   */
+  private async connectToTransport(
+    server: McpServer,
+    transport: StdioServerTransport,
+  ): Promise<Result<void, Error>> {
+    return await server.connect(transport)
+      .then(() => ok(undefined))
+      .catch((error: unknown) => err(error instanceof Error ? error : new Error(String(error))));
+  }
+
   static fromAdapterContainer(container: AdapterContainer): DependencyInjection {
     return new DependencyInjection(container);
   }

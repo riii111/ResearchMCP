@@ -54,35 +54,33 @@ Deno.test({
 
     setupMockFetch(mockResponse);
 
-    try {
-      const adapter = new WikipediaAdapter();
-      const result = await adapter.search({
-        q: "test query",
-        maxResults: 5,
-      });
+    const adapter = new WikipediaAdapter();
+    const result = await adapter.search({
+      q: "test query",
+      maxResults: 5,
+    });
 
-      assertEquals(result.isOk(), true);
+    assertEquals(result.isOk(), true);
 
-      if (result.isOk()) {
-        const response = result.value;
+    if (result.isOk()) {
+      const response = result.value;
 
-        assertEquals(response.source, "wikipedia");
-        assertEquals(response.results.length, 2);
-        assertEquals(response.totalResults, 2);
+      assertEquals(response.source, "wikipedia");
+      assertEquals(response.results.length, 2);
+      assertEquals(response.totalResults, 2);
 
-        const firstResult = response.results[0];
-        assertEquals(firstResult.title, "Test Article");
-        assertEquals(firstResult.url, "https://en.wikipedia.org/wiki/Test_Article");
-        assertEquals(firstResult.snippet, "This is a test article snippet");
-        assertEquals(firstResult.sourceType, "encyclopedia");
-        assertExists(firstResult.published);
+      const firstResult = response.results[0];
+      assertEquals(firstResult.title, "Test Article");
+      assertEquals(firstResult.url, "https://en.wikipedia.org/wiki/Test_Article");
+      assertEquals(firstResult.snippet, "This is a test article snippet");
+      assertEquals(firstResult.sourceType, "encyclopedia");
+      assertExists(firstResult.published);
 
-        // Check HTML tags were removed from snippet
-        assertEquals(firstResult.snippet.includes("<span>"), false);
-      }
-    } finally {
-      restoreFetch();
+      // Check HTML tags were removed from snippet
+      assertEquals(firstResult.snippet.includes("<span>"), false);
     }
+
+    restoreFetch();
   },
 });
 
@@ -91,26 +89,24 @@ Deno.test({
   fn: async () => {
     setupMockFetch({}, 500);
 
-    try {
-      const adapter = new WikipediaAdapter();
-      const result = await adapter.search({
-        q: "test query",
-        maxResults: 5,
-      });
+    const adapter = new WikipediaAdapter();
+    const result = await adapter.search({
+      q: "test query",
+      maxResults: 5,
+    });
 
-      assertEquals(result.isErr(), true);
+    assertEquals(result.isErr(), true);
 
-      if (result.isErr()) {
-        const error = result.error;
-        assertEquals(error.type, "network");
-        assertEquals(
-          (error as { type: string; message: string }).message.includes("Wikipedia API error"),
-          true,
-        );
-      }
-    } finally {
-      restoreFetch();
+    if (result.isErr()) {
+      const error = result.error;
+      assertEquals(error.type, "network");
+      assertEquals(
+        (error as { type: string; message: string }).message.includes("Wikipedia API error"),
+        true,
+      );
     }
+
+    restoreFetch();
   },
 });
 
@@ -137,27 +133,25 @@ Deno.test({
       } as Response);
     }) as typeof fetch;
 
-    try {
-      // Test with default language (en)
-      const defaultAdapter = new WikipediaAdapter();
-      await defaultAdapter.search({ q: "test", maxResults: 5 });
-      assertEquals(capturedUrl.includes("https://en.wikipedia.org"), true);
+    // Test with default language (en)
+    const defaultAdapter = new WikipediaAdapter();
+    await defaultAdapter.search({ q: "test", maxResults: 5 });
+    assertEquals(capturedUrl.includes("https://en.wikipedia.org"), true);
 
-      // Test with custom language (ja)
-      const japaneseAdapter = new WikipediaAdapter(undefined, "ja");
-      await japaneseAdapter.search({ q: "テスト", maxResults: 5 });
-      assertEquals(capturedUrl.includes("https://ja.wikipedia.org"), true);
+    // Test with custom language (ja)
+    const japaneseAdapter = new WikipediaAdapter(undefined, "ja");
+    await japaneseAdapter.search({ q: "テスト", maxResults: 5 });
+    assertEquals(capturedUrl.includes("https://ja.wikipedia.org"), true);
 
-      // Test with language override in query params
-      await defaultAdapter.search({
-        q: "test",
-        maxResults: 5,
-        language: "fr",
-      });
-      assertEquals(capturedUrl.includes("https://fr.wikipedia.org"), true);
-    } finally {
-      restoreFetch();
-    }
+    // Test with language override in query params
+    await defaultAdapter.search({
+      q: "test",
+      maxResults: 5,
+      language: "fr",
+    });
+    assertEquals(capturedUrl.includes("https://fr.wikipedia.org"), true);
+
+    restoreFetch();
   },
 });
 

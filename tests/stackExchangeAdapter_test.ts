@@ -76,49 +76,47 @@ Deno.test({
 
     setupMockFetch(mockResponse);
 
-    try {
-      const adapter = new StackExchangeAdapter(undefined, undefined, "stackoverflow");
-      const result = await adapter.search({
-        q: "typescript react",
-        maxResults: 5,
-      });
+    const adapter = new StackExchangeAdapter(undefined, undefined, "stackoverflow");
+    const result = await adapter.search({
+      q: "typescript react",
+      maxResults: 5,
+    });
 
-      assertEquals(result.isOk(), true);
+    assertEquals(result.isOk(), true);
 
-      if (result.isOk()) {
-        const response = result.value;
+    if (result.isOk()) {
+      const response = result.value;
 
-        assertEquals(response.source, "stackexchange");
-        assertEquals(response.results.length, 2);
-        assertEquals(response.totalResults, 2);
+      assertEquals(response.source, "stackexchange");
+      assertEquals(response.results.length, 2);
+      assertEquals(response.totalResults, 2);
 
-        const firstResult = response.results[0];
-        assertEquals(firstResult.title, "How to use TypeScript with React?");
-        assertEquals(
-          firstResult.url,
-          "https://stackoverflow.com/questions/12345/how-to-use-typescript-with-react",
-        );
-        assertExists(firstResult.relevanceScore);
-        assertEquals(firstResult.sourceType, "qa");
-        assertExists(firstResult.published);
+      const firstResult = response.results[0];
+      assertEquals(firstResult.title, "How to use TypeScript with React?");
+      assertEquals(
+        firstResult.url,
+        "https://stackoverflow.com/questions/12345/how-to-use-typescript-with-react",
+      );
+      assertExists(firstResult.relevanceScore);
+      assertEquals(firstResult.sourceType, "qa");
+      assertExists(firstResult.published);
 
-        // Verify tags in snippet
-        assertEquals(firstResult.snippet.includes("[javascript]"), true);
-        assertEquals(firstResult.snippet.includes("[typescript]"), true);
-        assertEquals(firstResult.snippet.includes("[reactjs]"), true);
+      // Verify tags in snippet
+      assertEquals(firstResult.snippet.includes("[javascript]"), true);
+      assertEquals(firstResult.snippet.includes("[typescript]"), true);
+      assertEquals(firstResult.snippet.includes("[reactjs]"), true);
 
-        // Verify that the question with accepted answer has higher relevance
-        const secondResult = response.results[1];
-        assertEquals(
-          firstResult.relevanceScore !== undefined &&
-            secondResult.relevanceScore !== undefined &&
-            firstResult.relevanceScore > secondResult.relevanceScore,
-          true,
-        );
-      }
-    } finally {
-      restoreFetch();
+      // Verify that the question with accepted answer has higher relevance
+      const secondResult = response.results[1];
+      assertEquals(
+        firstResult.relevanceScore !== undefined &&
+          secondResult.relevanceScore !== undefined &&
+          firstResult.relevanceScore > secondResult.relevanceScore,
+        true,
+      );
     }
+
+    restoreFetch();
   },
 });
 
@@ -146,19 +144,17 @@ Deno.test({
       } as Response);
     }) as typeof fetch;
 
-    try {
-      const adapter = new StackExchangeAdapter();
+    const adapter = new StackExchangeAdapter();
 
-      // Test query with recognized tags
-      await adapter.search({ q: "how to use javascript in react project", maxResults: 5 });
-      assertEquals(capturedUrl.includes("tagged=javascript%3Breact"), true);
+    // Test query with recognized tags
+    await adapter.search({ q: "how to use javascript in react project", maxResults: 5 });
+    assertEquals(capturedUrl.includes("tagged=javascript%3Breact"), true);
 
-      // Test query with no recognized tags
-      await adapter.search({ q: "how to solve this problem", maxResults: 5 });
-      assertEquals(capturedUrl.includes("tagged="), false);
-    } finally {
-      restoreFetch();
-    }
+    // Test query with no recognized tags
+    await adapter.search({ q: "how to solve this problem", maxResults: 5 });
+    assertEquals(capturedUrl.includes("tagged="), false);
+
+    restoreFetch();
   },
 });
 
@@ -167,23 +163,21 @@ Deno.test({
   fn: async () => {
     setupMockFetch({ error_id: 123, error_message: "Something went wrong" }, 400);
 
-    try {
-      const adapter = new StackExchangeAdapter();
-      const result = await adapter.search({
-        q: "invalid query",
-        maxResults: 5,
-      });
+    const adapter = new StackExchangeAdapter();
+    const result = await adapter.search({
+      q: "invalid query",
+      maxResults: 5,
+    });
 
-      assertEquals(result.isErr(), true);
+    assertEquals(result.isErr(), true);
 
-      if (result.isErr()) {
-        const error = result.error;
-        assertEquals(error.type, "invalidQuery");
-        assertExists((error as { issues: string[] }).issues);
-      }
-    } finally {
-      restoreFetch();
+    if (result.isErr()) {
+      const error = result.error;
+      assertEquals(error.type, "invalidQuery");
+      assertExists((error as { issues: string[] }).issues);
     }
+
+    restoreFetch();
   },
 });
 
