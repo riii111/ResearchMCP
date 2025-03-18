@@ -1,24 +1,14 @@
-FROM denoland/deno:debian
+FROM denoland/deno:debian AS builder
 
 WORKDIR /app
-
-RUN apt-get update && apt-get install -y \
-    git \
-    curl \
-    vim \
-    nano \
-    bash \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY deno.json ./
-
+COPY deno.json main.ts ./
 RUN deno cache main.ts || true
-
 COPY . .
-
 RUN deno cache main.ts
 
-EXPOSE 8088
+FROM denoland/deno:alpine
 
+WORKDIR /app
+COPY --from=builder /app /app
+EXPOSE 8088
 CMD ["run", "--allow-net", "--allow-env", "main.ts"]
