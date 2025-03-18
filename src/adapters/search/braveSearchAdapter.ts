@@ -2,7 +2,6 @@ import { err, ok, Result } from "neverthrow";
 import { QueryParams, SearchError, SearchResponse, SearchResult } from "../../models/search.ts";
 import { CacheAdapter } from "../cache/cacheAdapter.ts";
 import { createSearchCacheKey, SearchAdapter } from "./searchAdapter.ts";
-import { getValueSafe } from "../../utils/resultUtils.ts";
 import { QueryCategory } from "../../models/routing.ts";
 import { searchAdapterRegistry } from "./registry.ts";
 
