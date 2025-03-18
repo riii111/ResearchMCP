@@ -276,9 +276,17 @@ export class BraveSearchAdapter implements SearchAdapter {
     cacheKey: string,
     searchResponse: SearchResponse,
   ): void {
+    // Use match for proper error handling
     this.cache!.set(cacheKey, searchResponse, DEFAULT_CACHE_TTL_MS)
-      .then(() => {})
-      .catch(() => {}); // Ignore cache errors
+      .match(
+        () => {}, // Success - no action needed
+        (error) => {
+          // stderr output is appropriate for this log
+          void Deno.stderr.writeSync(
+            new TextEncoder().encode(`[BraveAdapter] Failed to cache search results: ${error.message}\n`)
+          )
+        }
+      );
   }
 
   private parseAge(age: string): number {

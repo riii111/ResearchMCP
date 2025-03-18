@@ -40,6 +40,11 @@ export class WikipediaAdapter implements SearchAdapter {
     "technical",
   ];
 
+  private logError(message: string): void {
+    // stderr output is appropriate for this log
+    void Deno.stderr.writeSync(new TextEncoder().encode(`[WikipediaAdapter] ${message}\n`));
+  }
+
   constructor(
     private readonly cache?: CacheAdapter,
     private readonly language: string = "en",
@@ -179,9 +184,12 @@ export class WikipediaAdapter implements SearchAdapter {
     searchResponse: SearchResponse,
   ): void {
     const cacheKey = createSearchCacheKey(params, this.id);
-    void this.cache!.set(cacheKey, searchResponse, DEFAULT_CACHE_TTL_MS)
-      .then(() => {})
-      .catch(() => {}); // Ignore cache errors
+    // Use match for proper error handling
+    this.cache!.set(cacheKey, searchResponse, DEFAULT_CACHE_TTL_MS)
+      .match(
+        () => {}, // Success - no action needed
+        (error) => this.logError(`Failed to cache search results: ${error.message}`)
+      );
   }
 }
 

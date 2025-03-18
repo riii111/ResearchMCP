@@ -44,6 +44,11 @@ export class TavilySearchAdapter implements SearchAdapter {
     "technical",
     "qa",
   ];
+  
+  private logError(message: string): void {
+    // stderr output is appropriate for this log
+    void Deno.stderr.writeSync(new TextEncoder().encode(`[TavilyAdapter] ${message}\n`));
+  }
 
   constructor(
     private readonly apiKey: string,
@@ -99,7 +104,7 @@ export class TavilySearchAdapter implements SearchAdapter {
         );
 
         if (this.cache) {
-          this.cacheSearchResults(params, searchResponse);
+          void this.cacheSearchResults(params, searchResponse);
         }
 
         return ok(searchResponse);
@@ -169,7 +174,7 @@ export class TavilySearchAdapter implements SearchAdapter {
         (errorData) => {
           const errorMessage = errorData.detail || errorData.message ||
             `API call error: ${response.status}`;
-          console.error(`API error: ${errorMessage}`);
+          void this.logError(`API error: ${errorMessage}`);
         },
         () => {/* Ignore parse errors */},
       );
@@ -188,7 +193,7 @@ export class TavilySearchAdapter implements SearchAdapter {
     const results: SearchResult[] = [];
 
     if (tavilyResponse.answer) {
-      results.push({
+      void results.push({
         id: btoa(`tavily-answer-${Date.now()}`),
         title: "AI Generated Answer",
         url: "https://tavily.com/",
@@ -219,7 +224,7 @@ export class TavilySearchAdapter implements SearchAdapter {
       };
     });
 
-    results.push(...webResults);
+    void results.push(...webResults);
 
     return {
       query: params,
@@ -235,9 +240,12 @@ export class TavilySearchAdapter implements SearchAdapter {
     searchResponse: SearchResponse,
   ): void {
     const cacheKey = createSearchCacheKey(params, this.id);
+    // Use match for proper error handling
     this.cache!.set(cacheKey, searchResponse, DEFAULT_CACHE_TTL_MS)
-      .then(() => {})
-      .catch(() => {}); // Ignore cache errors
+      .match(
+        () => {}, // Success - no action needed
+        (error) => this.logError(`Failed to cache search results: ${error.message}`)
+      );
   }
 }
 
