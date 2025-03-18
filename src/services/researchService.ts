@@ -155,18 +155,10 @@ export class ResearchService {
   }
 
   private parseJsonContent(content: string): Result<ClaudeResponseType, McpError> {
+    let parsedData: unknown;
+    
     try {
-      const parsedData = JSON.parse(content);
-      
-      if (!isClaudeResponseType(parsedData)) {
-        return err({
-          type: "server",
-          message: "Claude response does not match expected format",
-          details: undefined
-        });
-      }
-      
-      return ok(parsedData);
+      parsedData = JSON.parse(content);
     } catch (error) {
       return err({
         type: "server",
@@ -176,6 +168,16 @@ export class ResearchService {
         details: undefined
       });
     }
+    
+    if (!isClaudeResponseType(parsedData)) {
+      return err({
+        type: "server",
+        message: "Claude response does not match expected format",
+        details: undefined
+      });
+    }
+    
+    return ok(parsedData);
   }
 
   private buildAnalysisPrompt(query: string, results: ReadonlyArray<McpResult>): string {
