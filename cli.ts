@@ -84,12 +84,18 @@ function startServer(): ResultAsync<void, CliError> {
           if (result.isErr()) {
             const error = result.error;
             if (error instanceof Error) {
-              throw new Error(`Server error: ${error.message}`);
+              return Promise.reject({
+                type: "server",
+                message: `Server error: ${error.message}`,
+              });
             } else {
-              throw new Error(`DI error: ${error.type} - ${error.message}`);
+              return Promise.reject({
+                type: "di",
+                message: `DI error: ${error.type} - ${error.message}`,
+              });
             }
           }
-          return undefined;
+          return Promise.resolve(undefined);
         }),
         (error): CliError => ({
           type: "server",
