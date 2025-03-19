@@ -56,7 +56,6 @@ async function main() {
 
   console.log(`Server running on http://localhost:${port}`);
 
-  // @ts-ignore: Type definition mismatch in Deno.serve API
   await Deno.serve({ port }, app.fetch);
 }
 
