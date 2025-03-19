@@ -67,10 +67,10 @@ export class SearchService implements SearchUseCase {
             break;
           case "invalidQuery":
             message = `Invalid query: ${error.issues.join(", ")}`;
-            // Provide more user-friendly message for Latin1 encoding errors
+            // Provide more user-friendly message for encoding errors
             if (error.issues.some((issue) => issue.includes("cannot be properly encoded"))) {
               message =
-                "The search query contains characters that cannot be processed. Some search APIs have limited support for non-Latin characters (like Japanese, Chinese, or Korean). Please try searching in English instead.";
+                "The search query contains characters that cannot be processed by some search engines. We're trying multiple search providers, but some may fail with non-Latin characters or special symbols. Results may be limited.";
             }
             break;
           case "authorization":

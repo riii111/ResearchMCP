@@ -31,8 +31,12 @@ export class DependencyInjection {
     }
   }
 
-  registerSearchRepository(repository: SearchRepository): this {
-    this.searchRepositories.push(repository);
+  registerSearchRepository(repository: SearchRepository | SearchRepository[]): this {
+    if (Array.isArray(repository)) {
+      this.searchRepositories.push(...repository);
+    } else {
+      this.searchRepositories.push(repository);
+    }
     return this;
   }
 

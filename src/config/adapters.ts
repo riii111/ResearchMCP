@@ -16,7 +16,7 @@ import type { ApiKeys } from "./env.ts";
  */
 export interface AdapterContainer {
   cache: CacheAdapterRepository;
-  search: SearchAdapterRepository;
+  search: SearchAdapterRepository[];
   classifier: QueryClassifierAdapter;
 }
 
@@ -63,13 +63,15 @@ export function initializeAdapters(apiKeys: ApiKeys): AdapterContainer {
     throw new Error("No search adapters registered");
   }
 
-  const searchRepository = new SearchAdapterRepository(searchAdapters[0]);
+  const searchRepositories = searchAdapters.map(
+    (adapter) => new SearchAdapterRepository(adapter),
+  );
   const queryClassifierService = new QueryClassifierService();
   const classifierAdapter = new QueryClassifierAdapter(queryClassifierService);
 
   return {
     cache: cacheRepository,
-    search: searchRepository,
+    search: searchRepositories,
     classifier: classifierAdapter,
   };
 }

@@ -141,7 +141,7 @@ export class BraveSearchAdapter implements SearchAdapter {
             type: "invalidQuery",
             message: "Query contains characters that cannot be properly encoded",
             issues: [
-              "Query contains characters that cannot be properly encoded. Try using English or Latin script characters.",
+              "Query contains characters that cannot be properly encoded. BraveSearch has limited support for non-Latin characters (like Japanese, Chinese, Korean, or special symbols). Try simplifying your query or using English.",
             ],
           } as SearchError;
         }
