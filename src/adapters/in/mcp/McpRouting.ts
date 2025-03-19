@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { AppDI, DIError } from "../../../config/DependencyInjection.ts";
+import { AppDI, DIError } from "../../../config/AppDI.ts";
 import { err, ok, Result } from "neverthrow";
 
 /**
