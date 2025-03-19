@@ -74,14 +74,19 @@ export class DependencyInjection {
     return this.searchService;
   }
 
+  private mcpController?: McpController;
+
   getMcpController(): McpController {
-    const searchService = this.getSearchService();
-    return new McpController(searchService);
+    if (!this.mcpController) {
+      const searchService = this.getSearchService();
+      this.mcpController = new McpController(searchService);
+    }
+    return this.mcpController;
   }
 
   getMcpRouter(): Hono {
-    const searchService = this.getSearchService();
-    return createMcpRouter(searchService);
+    const controller = this.getMcpController();
+    return controller.createRouter();
   }
 
   getHttpController(): SearchController {
@@ -140,8 +145,7 @@ export class DependencyInjection {
   }
 
   private setupSearchTool(server: McpServer): void {
-    const searchService = this.getSearchService();
-    const controller = new McpController(searchService);
+    const controller = this.getMcpController();
     controller.registerSearchTool(server);
   }
 
