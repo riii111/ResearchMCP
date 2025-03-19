@@ -24,14 +24,14 @@ export class ApiError extends Error {
 export interface ApiErrorResponse<D = null, E = Record<string, unknown>> {
   status: "error";
   message: string;
-  error?: E;
   data?: D;
+  error?: E;
 }
 
 export function createErrorResponse<D = null, E = Record<string, unknown>>(
   message: string,
-  error?: E,
   data?: D,
+  error?: E,
 ): ApiErrorResponse<D, E> {
   return {
     status: "error",
@@ -52,8 +52,8 @@ export function domainErrorToResponse<D = null>(
 
   return createErrorResponse<D, typeof errorDetails>(
     error.message,
-    errorDetails,
     data,
+    errorDetails,
   );
 }
 
