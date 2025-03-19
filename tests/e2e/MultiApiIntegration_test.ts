@@ -1,5 +1,5 @@
 /// <reference lib="deno.ns" />
-import { assert, assertEquals, assertExists } from "https://deno.land/std@0.211.0/assert/mod.ts";
+import { assert, assertEquals } from "https://deno.land/std@0.211.0/assert/mod.ts";
 import { err, ok, Result } from "neverthrow";
 import { SearchService } from "../../src/application/services/SearchService.ts";
 import { RoutingService } from "../../src/application/services/RoutingService.ts";
