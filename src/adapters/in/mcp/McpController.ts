@@ -15,6 +15,7 @@ import {
 import { err, ok, Result } from "neverthrow";
 import { getErrorStatusCode } from "../../../domain/models/errors.ts";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
+import { debug, error, info } from "../../../utils/logger.ts";
 
 type McpControllerError = McpError | McpParseError;
 
@@ -51,7 +52,7 @@ export class McpController {
         freshness: z.enum(["day", "week", "month"]).optional(),
       },
       async (params, _extra) => {
-        Deno.stderr.writeSync(new TextEncoder().encode(`MCP search request: ${params.query}\n`));
+        info(`MCP search request: ${params.query}`);
 
         const searchResult = await this.searchUseCase.searchMcp({
           query: params.query,
@@ -75,24 +76,22 @@ export class McpController {
               ],
             };
           },
-          (error) => {
-            Deno.stderr.writeSync(
-              new TextEncoder().encode(`Search error: ${JSON.stringify(error)}\n`),
-            );
+          (err) => {
+            error(`Search error: ${JSON.stringify(err)}`);
             let errorMessage = "";
 
-            switch (error.type) {
+            switch (err.type) {
               case "validation":
-                errorMessage = `Validation error: ${error.message}`;
+                errorMessage = `Validation error: ${err.message}`;
                 break;
               case "search":
-                errorMessage = `Search error: ${error.details}`;
+                errorMessage = `Search error: ${err.details}`;
                 break;
               case "server":
-                errorMessage = `Server error: ${error.message}`;
+                errorMessage = `Server error: ${err.message}`;
                 break;
               default:
-                errorMessage = `Error: ${error.message || "Unknown error"}`;
+                errorMessage = `Error: ${err.message || "Unknown error"}`;
             }
 
             return {
@@ -166,15 +165,13 @@ export class McpController {
   private async parseRequestBody(c: Context): Promise<Result<unknown, McpParseError>> {
     return await c.req.json()
       .then((data) => ok(data))
-      .catch((error) => {
-        Deno.stderr.writeSync(
-          new TextEncoder().encode(
-            `JSON parse error: ${error instanceof Error ? error.message : "Unknown error"}\n`,
-          ),
+      .catch((err) => {
+        error(
+          `JSON parse error: ${err instanceof Error ? err.message : "Unknown error"}`,
         );
         return err<unknown, McpParseError>({
           type: "parse",
-          message: error instanceof Error ? error.message : "Unknown error",
+          message: err instanceof Error ? err.message : "Unknown error",
           details: undefined,
         });
       });
@@ -195,7 +192,31 @@ export class McpController {
   }
 
   private async performSearch(request: McpRequest): Promise<Result<McpResponse, McpError>> {
-    return await this.searchUseCase.searchMcp(request);
+    const result = await this.searchUseCase.searchMcp(request);
+
+    // Log the search result
+    if (result.isOk()) {
+      const response = result.value;
+      info(
+        `[MCP_CONTROLLER] Search successful, returned ${response.results.length} results from source: ${response.source}`,
+      );
+
+      // Log the first few results
+      const maxResultsToLog = Math.min(3, response.results.length);
+      for (let i = 0; i < maxResultsToLog; i++) {
+        const result = response.results[i];
+        info(
+          `[MCP_CONTROLLER] Result ${i + 1}: ${result.title} [Source: ${result.source}]`,
+        );
+      }
+    } else {
+      const err = result.error;
+      error(
+        `[MCP_CONTROLLER] Search failed: ${err.type} - ${err.message}`,
+      );
+    }
+
+    return result;
   }
 
   private handleError(c: Context, error: McpControllerError): Response {
