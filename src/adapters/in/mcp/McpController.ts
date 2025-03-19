@@ -15,7 +15,7 @@ import {
 import { err, ok, Result } from "neverthrow";
 import { getErrorStatusCode } from "../../../domain/models/errors.ts";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
-import { error, info } from "../../../utils/logger.ts";
+import { error, info } from "../../../config/logger.ts";
 
 type McpControllerError = McpError | McpParseError;
 

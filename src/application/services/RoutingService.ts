@@ -8,7 +8,7 @@ import {
 import { QueryCategory } from "../../domain/models/routing.ts";
 import { QueryClassifierPort } from "../ports/out/QueryClassifierPort.ts";
 import { SearchRepository } from "../ports/out/SearchRepository.ts";
-import { debug, info } from "../../utils/logger.ts";
+import { debug, info } from "../../config/logger.ts";
 
 /**
  * Service for routing search queries to appropriate search repositories
