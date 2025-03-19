@@ -1,7 +1,6 @@
 import { Hono } from "hono";
 import { SearchUseCase } from "../application/ports/in/SearchUseCase.ts";
 import { SearchRepository } from "../application/ports/out/SearchRepository.ts";
-import { CacheRepository } from "../application/ports/out/CacheRepository.ts";
 import { QueryClassifierPort } from "../application/ports/out/QueryClassifierPort.ts";
 import { SearchService } from "../application/services/SearchService.ts";
 import { RoutingService } from "../application/services/RoutingService.ts";
