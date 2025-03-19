@@ -18,39 +18,6 @@ export class RoutingService {
     private readonly searchRepositories: SearchRepository[],
   ) {}
 
-  routeAndSearch(params: QueryParams): ResultAsync<SearchResponse, SearchError> {
-    // Determine search category (use provided or classify)
-    const categoryResult = params.routing?.category
-      ? ok(params.routing.category)
-      : this.classifyQuery(params.q);
-
-    if (categoryResult.isErr()) {
-      return ResultAsync.fromPromise(
-        Promise.reject({
-          type: "classification_error",
-          message: categoryResult.error.message,
-        }),
-        (e) => e as SearchError,
-      );
-    }
-
-    const category = categoryResult.value;
-    const repositories = this.getRepositoriesForCategory(category, params.q);
-
-    if (repositories.length === 0) {
-      return ResultAsync.fromPromise(
-        Promise.reject({
-          type: "no_adapter_available",
-          message: `No repository available for category ${category}`,
-        }),
-        (e) => e as SearchError,
-      );
-    }
-
-    // Always use parallel search
-    return this.multiSearch(params, category);
-  }
-
   multiSearch(
     params: QueryParams,
     category?: QueryCategory,
@@ -91,6 +58,23 @@ export class RoutingService {
         }"\n`,
       ),
     );
+
+    // Log all registered repositories
+    Deno.stderr.writeSync(
+      encoder.encode(
+        `${logHeader} All registered repositories: ${this.searchRepositories.length}\n`,
+      ),
+    );
+    for (const repo of this.searchRepositories) {
+      Deno.stderr.writeSync(
+        encoder.encode(
+          `${logHeader} - Repository: ${repo.getId()} (${repo.getName()}), Categories: ${
+            repo.getSupportedCategories().join(", ")
+          }\n`,
+        ),
+      );
+    }
+
     Deno.stderr.writeSync(
       encoder.encode(
         `${logHeader} Available repositories: ${

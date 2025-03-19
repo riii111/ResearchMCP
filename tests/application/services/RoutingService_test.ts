@@ -110,7 +110,7 @@ Deno.test("RoutingService should route to appropriate repository based on catego
   );
 
   // Test routing to general repository
-  const result = await routingService.routeAndSearch({ q: "test", maxResults: 10 });
+  const result = await routingService.multiSearch({ q: "test", maxResults: 10 });
   assertEquals(result.isOk(), true);
 
   const response = result._unsafeUnwrap();
@@ -166,7 +166,7 @@ Deno.test("RoutingService should route to technical repository for technical que
   );
 
   // Test routing to technical repository
-  const result = await routingService.routeAndSearch({ q: "test", maxResults: 10 });
+  const result = await routingService.multiSearch({ q: "test", maxResults: 10 });
   assertEquals(result.isOk(), true);
 
   const response = result._unsafeUnwrap();
@@ -183,7 +183,7 @@ Deno.test("RoutingService should handle no available repositories", async () => 
   );
 
   // Test routing with no repositories
-  const result = await routingService.routeAndSearch({ q: "test", maxResults: 10 });
+  const result = await routingService.multiSearch({ q: "test", maxResults: 10 });
   assertEquals(result.isErr(), true);
 
   const error = result._unsafeUnwrapErr();
