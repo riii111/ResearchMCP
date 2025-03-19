@@ -7,14 +7,7 @@ import { QueryCategory } from "../models/routing.ts";
 export class QueryClassifierService {
   /**
    * Classify a query string into a category
-   * Each category maps to different preferred search APIs:
-   * - web3: BraveSearch (primary), StackExchange, GitHub
-   * - programming: BraveSearch, GitHub (good for code), StackExchange (good for Q&A)
-   * - technical: BraveSearch, Tavily, StackExchange
-   * - academic: Tavily (AI-enhanced), BraveSearch, Wikipedia
-   * - qa: Tavily (primary, AI-optimized), StackExchange, BraveSearch
-   * - general: Tavily (primary), BraveSearch, Wikipedia
-   *
+   * Each category maps to different preferred search APIs
    * @param query The search query to classify
    * @returns The category of the query
    */

@@ -7,8 +7,9 @@ import { SearchService } from "../application/services/SearchService.ts";
 import { RoutingService } from "../application/services/RoutingService.ts";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
-import { createMcpRouter, McpController } from "../adapters/in/mcp/index.ts";
-import { SearchController } from "../adapters/in/http/index.ts";
+import { McpController } from "../adapters/in/mcp/McpController.ts";
+import { createMcpRouter } from "../adapters/in/mcp/McpRouting.ts";
+import { SearchController } from "../adapters/in/http/SearchController.ts";
 import { err, ok, Result } from "neverthrow";
 import { AdapterContainer } from "./adapters.ts";
 

@@ -31,11 +31,9 @@ export function initializeAdapters(apiKeys: ApiKeys): AdapterContainer {
     Deno.stderr.writeSync(encoder.encode(message + "\n"));
   };
 
-  // Initialize adapters
   const memoryCacheAdapter = new MemoryCacheAdapter();
   const cacheRepository = new CacheAdapterRepository(memoryCacheAdapter);
 
-  // Register search adapters
   registerBraveSearchAdapter(apiKeys.brave, memoryCacheAdapter);
   log("Registered BraveSearchAdapter");
 
@@ -60,13 +58,11 @@ export function initializeAdapters(apiKeys: ApiKeys): AdapterContainer {
   // registerStackExchangeAdapter(apiKeys.stackExchange, memoryCacheAdapter);
   // log("StackExchange API integration temporarily disabled");
 
-  // Get the first available search adapter
   const searchAdapters = searchAdapterRegistry.getAllAdapters();
   if (searchAdapters.length === 0) {
     throw new Error("No search adapters registered");
   }
 
-  // Initialize repositories
   const searchRepository = new SearchAdapterRepository(searchAdapters[0]);
   const queryClassifierService = new QueryClassifierService();
   const classifierAdapter = new QueryClassifierAdapter(queryClassifierService);

@@ -1,11 +1,14 @@
-import { DomainError } from "../../../domain/models/errors.ts";
+import { DomainError, DomainErrorType } from "../../../domain/models/errors.ts";
 import { getErrorStatusCode } from "../../../domain/models/errors.ts";
 
+/**
+ * API error class for HTTP responses
+ */
 export class ApiError extends Error {
   status: number;
-  details?: unknown;
+  details?: Record<string, unknown>;
 
-  constructor(message: string, status = 500, details?: unknown) {
+  constructor(message: string, status = 500, details?: Record<string, unknown>) {
     super(message);
     this.name = "ApiError";
     this.status = status;
@@ -13,18 +16,23 @@ export class ApiError extends Error {
   }
 }
 
-export interface ApiErrorResponse<D = unknown, T = unknown> {
+/**
+ * Common interface for API error responses
+ * @template D - Type of response data
+ * @template E - Type of error details
+ */
+export interface ApiErrorResponse<D = null, E = Record<string, unknown>> {
   status: "error";
   message: string;
-  error?: T;
+  error?: E;
   data?: D;
 }
 
-export function createErrorResponse<D = unknown, T = unknown>(
+export function createErrorResponse<D = null, E = Record<string, unknown>>(
   message: string,
-  error?: T,
+  error?: E,
   data?: D,
-): ApiErrorResponse<D, T> {
+): ApiErrorResponse<D, E> {
   return {
     status: "error",
     message,
@@ -33,13 +41,18 @@ export function createErrorResponse<D = unknown, T = unknown>(
   };
 }
 
-export function domainErrorToResponse<D = unknown>(
+export function domainErrorToResponse<D = null>(
   error: DomainError,
   data?: D,
-): ApiErrorResponse<D> {
-  return createErrorResponse(
+): ApiErrorResponse<D, { type: DomainErrorType } & Record<string, unknown>> {
+  const errorDetails = {
+    type: error.type,
+    ...(error.details as Record<string, unknown> || {}),
+  };
+
+  return createErrorResponse<D, typeof errorDetails>(
     error.message,
-    error.details,
+    errorDetails,
     data,
   );
 }
@@ -48,6 +61,6 @@ export function domainErrorToApiError(error: DomainError): ApiError {
   return new ApiError(
     error.message,
     getErrorStatusCode(error),
-    error.details,
+    { type: error.type, ...(error.details as Record<string, unknown> || {}) },
   );
 }
