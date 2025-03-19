@@ -71,8 +71,8 @@ export class WikipediaAdapter implements SearchAdapter {
   getRelevanceScore(_query: string, category: QueryCategory): number {
     const categoryScores: Record<QueryCategory, number> = {
       "academic": 0.9,
-      "general": 0.8,
-      "technical": 0.75,
+      "general": 0.7,
+      "technical": 0.7,
       "programming": 0.5,
       "web3": 0.5,
       "qa": 0.4,

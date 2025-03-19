@@ -82,8 +82,8 @@ export class BraveSearchAdapter implements SearchAdapter {
     const categoryScores: Record<Partial<QueryCategory>, number> = {
       "general": 0.9,
       "programming": 0.8,
-      "web3": 0.7,
-      "technical": 0.7,
+      "web3": 0.8,
+      "technical": 0.8,
       "academic": 0.7,
       "qa": 0.7,
     };

@@ -79,8 +79,8 @@ export class TavilySearchAdapter implements SearchAdapter {
       "qa": 0.95,
       "academic": 0.85,
       "technical": 0.85,
-      "programming": 0.8,
-      "web3": 0.7,
+      "programming": 0.85,
+      "web3": 0.75,
     };
 
     return categoryScores[category] ?? 0.7;
