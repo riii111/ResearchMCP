@@ -10,6 +10,7 @@ import { QueryClassifierService } from "../domain/services/queryClassifier.ts";
 // import { registerGitHubAdapter } from "../adapters/out/search/GithubAdapter.ts";
 // import { registerStackExchangeAdapter } from "../adapters/out/search/StackExchangeAdapter.ts";
 import type { ApiKeys } from "./env.ts";
+import { err, ok, Result } from "neverthrow";
 
 /**
  * Type definition representing the adapter container.
@@ -20,12 +21,18 @@ export interface AdapterContainer {
   classifier: QueryClassifierAdapter;
 }
 
+// アダプター初期化エラー型
+export type AdapterInitError = {
+  type: "no_adapters";
+  message: string;
+};
+
 /**
  * Initializes and registers adapters.
  * @param apiKeys API keys object.
- * @returns Initialized adapter container.
+ * @returns Result with initialized adapter container or error.
  */
-export function initializeAdapters(apiKeys: ApiKeys): AdapterContainer {
+export function initializeAdapters(apiKeys: ApiKeys): Result<AdapterContainer, AdapterInitError> {
   const encoder = new TextEncoder();
   const log = (message: string) => {
     Deno.stderr.writeSync(encoder.encode(message + "\n"));
@@ -60,7 +67,10 @@ export function initializeAdapters(apiKeys: ApiKeys): AdapterContainer {
 
   const searchAdapters = searchAdapterRegistry.getAllAdapters();
   if (searchAdapters.length === 0) {
-    throw new Error("No search adapters registered");
+    return err({
+      type: "no_adapters",
+      message: "No search adapters registered",
+    });
   }
 
   const searchRepositories = searchAdapters.map(
@@ -69,9 +79,9 @@ export function initializeAdapters(apiKeys: ApiKeys): AdapterContainer {
   const queryClassifierService = new QueryClassifierService();
   const classifierAdapter = new QueryClassifierAdapter(queryClassifierService);
 
-  return {
+  return ok({
     cache: cacheRepository,
     search: searchRepositories,
     classifier: classifierAdapter,
-  };
+  });
 }

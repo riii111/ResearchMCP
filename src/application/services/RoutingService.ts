@@ -1,4 +1,4 @@
-import { ok, Result, ResultAsync } from "neverthrow";
+import { err, ok, Result, ResultAsync } from "neverthrow";
 import {
   QueryParams,
   SearchError,
@@ -111,7 +111,13 @@ export class RoutingService {
     );
 
     return ResultAsync.fromPromise(
-      this.executeParallelSearches(selectedRepositories, params),
+      this.executeParallelSearches(selectedRepositories, params)
+        .then((result) => {
+          if (result.isErr()) {
+            return Promise.reject(result.error);
+          }
+          return result.value;
+        }),
       (e) => e as SearchError,
     );
   }
@@ -119,7 +125,7 @@ export class RoutingService {
   private async executeParallelSearches(
     repositories: SearchRepository[],
     params: QueryParams,
-  ): Promise<SearchResponse> {
+  ): Promise<Result<SearchResponse, SearchError>> {
     const startTime = Date.now();
     const encoder = new TextEncoder();
 
@@ -152,16 +158,16 @@ export class RoutingService {
       // If all searches failed, return the first error
       const firstError = searchResults[0];
       if (firstError.isErr()) {
-        throw firstError.error;
+        return err(firstError.error);
       }
 
-      throw {
+      return err({
         type: "network",
         message: "All search repositories failed",
-      };
+      });
     }
 
-    return this.mergeSearchResults(successResults, params, startTime);
+    return ok(this.mergeSearchResults(successResults, params, startTime));
   }
 
   private mergeSearchResults(

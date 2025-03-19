@@ -43,18 +43,12 @@ function setupDependencyInjection(): Result<AppDI, CliError> {
   const apiKeys = loadApiKeysResult.value;
 
   // Initialize adapters
-  const initAdaptersResult = fromThrowable(
-    () => initializeAdapters(apiKeys),
-    (error): CliError => ({
-      type: "setup",
-      message: `Failed to initialize adapters: ${
-        error instanceof Error ? error.message : String(error)
-      }`,
-    }),
-  )();
-
+  const initAdaptersResult = initializeAdapters(apiKeys);
   if (initAdaptersResult.isErr()) {
-    return err(initAdaptersResult.error);
+    return err({
+      type: "setup",
+      message: `Failed to initialize adapters: ${initAdaptersResult.error.message}`,
+    });
   }
 
   // Create dependency injection container
@@ -86,19 +80,18 @@ function startServer(): ResultAsync<void, CliError> {
       logToStderr("- prompts: minimal implementation");
 
       return ResultAsync.fromPromise(
-        di.startMcpServer()
-          .then((result) => {
-            if (result.isErr()) {
-              const error = result.error;
-              if (error instanceof Error) {
-                throw error;
-              } else {
-                throw new Error(`DI error: ${error.type} - ${error.message}`);
-              }
+        di.startMcpServer().then((result) => {
+          if (result.isErr()) {
+            const error = result.error;
+            if (error instanceof Error) {
+              throw new Error(`Server error: ${error.message}`);
+            } else {
+              throw new Error(`DI error: ${error.type} - ${error.message}`);
             }
-            return undefined;
-          }),
-        (error) => ({
+          }
+          return undefined;
+        }),
+        (error): CliError => ({
           type: "server",
           message: `Server error: ${error instanceof Error ? error.message : String(error)}`,
         }),
