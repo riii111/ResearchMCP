@@ -86,7 +86,6 @@ describe("McpController", () => {
   describe("registerSearchTool", () => {
     it("should register search tool with MCP server", () => {
       // This is a bit hard to test directly since we'd need to mock the MCP server
-      // We'll just verify it doesn't throw an error
       const mockServer = {
         tool: (_name: string, _description: string, _schema: unknown, _handler: unknown) => {
           // Mock implementation
