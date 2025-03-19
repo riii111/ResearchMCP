@@ -12,6 +12,12 @@ import { SearchController } from "../adapters/in/http/SearchController.ts";
 import { err, ok, Result } from "neverthrow";
 import { AdapterContainer } from "./adapters.ts";
 
+// エラー型定義
+export type DIError =
+  | { type: "already_initialized"; message: string }
+  | { type: "not_initialized"; message: string }
+  | { type: "missing_dependency"; message: string };
+
 export class AppDI {
   private static instance: AppDI | null = null;
 
@@ -24,9 +30,12 @@ export class AppDI {
 
   private constructor() {}
 
-  static initialize(adapterContainer: AdapterContainer): AppDI {
+  static initialize(adapterContainer: AdapterContainer): Result<AppDI, DIError> {
     if (AppDI.instance !== null) {
-      throw new Error("DependencyInjection already initialized");
+      return err({
+        type: "already_initialized",
+        message: "DependencyInjection already initialized",
+      });
     }
 
     AppDI.instance = new AppDI();
@@ -35,15 +44,18 @@ export class AppDI {
     di.registerSearchRepository(adapterContainer.search);
     di.registerQueryClassifier(adapterContainer.classifier);
 
-    return di;
+    return ok(di);
   }
 
-  static getInstance(): AppDI {
+  static getInstance(): Result<AppDI, DIError> {
     if (AppDI.instance === null) {
-      throw new Error("DependencyInjection not initialized. Call initialize() first.");
+      return err({
+        type: "not_initialized",
+        message: "DependencyInjection not initialized. Call initialize() first.",
+      });
     }
 
-    return AppDI.instance;
+    return ok(AppDI.instance);
   }
 
   registerSearchRepository(repository: SearchRepository | SearchRepository[]): this {
@@ -60,10 +72,13 @@ export class AppDI {
     return this;
   }
 
-  getRoutingService(): RoutingService {
+  getRoutingService(): Result<RoutingService, DIError> {
     if (!this.routingService) {
       if (!this.queryClassifier) {
-        throw new Error("QueryClassifier not registered");
+        return err({
+          type: "missing_dependency",
+          message: "QueryClassifier not registered",
+        });
       }
 
       this.routingService = new RoutingService(
@@ -72,45 +87,65 @@ export class AppDI {
       );
     }
 
-    return this.routingService;
+    return ok(this.routingService);
   }
 
-  getSearchService(): SearchUseCase {
+  getSearchService(): Result<SearchUseCase, DIError> {
+    const routingResult = this.getRoutingService();
+    if (routingResult.isErr()) {
+      return err(routingResult.error);
+    }
+
     if (!this.searchService) {
-      const routingService = this.getRoutingService();
-      this.searchService = new SearchService(routingService);
+      this.searchService = new SearchService(routingResult.value);
     }
 
-    return this.searchService;
+    return ok(this.searchService);
   }
 
-  getMcpController(): McpController {
+  getMcpController(): Result<McpController, DIError> {
+    const searchResult = this.getSearchService();
+    if (searchResult.isErr()) {
+      return err(searchResult.error);
+    }
+
     if (!this.mcpController) {
-      const searchService = this.getSearchService();
-      this.mcpController = new McpController(searchService);
+      this.mcpController = new McpController(searchResult.value);
     }
-    return this.mcpController;
+    return ok(this.mcpController);
   }
 
-  getMcpRouter(): Hono {
-    const controller = this.getMcpController();
-    return controller.createRouter();
+  getMcpRouter(): Result<Hono, DIError> {
+    const controllerResult = this.getMcpController();
+    if (controllerResult.isErr()) {
+      return err(controllerResult.error);
+    }
+
+    return ok(controllerResult.value.createRouter());
   }
 
-  getHttpController(): SearchController {
+  getHttpController(): Result<SearchController, DIError> {
+    const searchResult = this.getSearchService();
+    if (searchResult.isErr()) {
+      return err(searchResult.error);
+    }
+
     if (!this.httpController) {
-      const searchService = this.getSearchService();
-      this.httpController = new SearchController(searchService);
+      this.httpController = new SearchController(searchResult.value);
     }
-    return this.httpController;
+    return ok(this.httpController);
   }
 
-  getHttpRouter(): Hono {
-    const controller = this.getHttpController();
-    return controller.createRouter();
+  getHttpRouter(): Result<Hono, DIError> {
+    const controllerResult = this.getHttpController();
+    if (controllerResult.isErr()) {
+      return err(controllerResult.error);
+    }
+
+    return ok(controllerResult.value.createRouter());
   }
 
-  createMcpServer(): McpServer {
+  createMcpServer(): Result<McpServer, DIError> {
     const encoder = new TextEncoder();
     const log = (message: string) => {
       Deno.stderr.writeSync(encoder.encode(message + "\n"));
@@ -148,24 +183,37 @@ export class AppDI {
       }),
     );
 
-    this.setupSearchTool(server);
+    const setupResult = this.setupSearchTool(server);
+    if (setupResult.isErr()) {
+      return err(setupResult.error);
+    }
 
     log("MCP server configured with search tool");
-    return server;
+    return ok(server);
   }
 
-  private setupSearchTool(server: McpServer): void {
-    const controller = this.getMcpController();
-    controller.registerSearchTool(server);
+  private setupSearchTool(server: McpServer): Result<void, DIError> {
+    const controllerResult = this.getMcpController();
+    if (controllerResult.isErr()) {
+      return err(controllerResult.error);
+    }
+
+    controllerResult.value.registerSearchTool(server);
+    return ok(undefined);
   }
 
-  async startMcpServer(): Promise<Result<void, Error>> {
+  async startMcpServer(): Promise<Result<void, DIError | Error>> {
     const encoder = new TextEncoder();
     Deno.stderr.writeSync(
       encoder.encode("Starting MCP server with stdio transport...\n"),
     );
 
-    const server = this.createMcpServer();
+    const serverResult = this.createMcpServer();
+    if (serverResult.isErr()) {
+      return err(serverResult.error);
+    }
+
+    const server = serverResult.value;
     const transport = new StdioServerTransport();
 
     const result = await this.connectToTransport(server, transport);
@@ -195,7 +243,7 @@ export class AppDI {
 
 // Legacy class for backward compatibility
 export class DependencyInjection {
-  static fromAdapterContainer(container: AdapterContainer): AppDI {
+  static fromAdapterContainer(container: AdapterContainer): Result<AppDI, DIError> {
     return AppDI.initialize(container);
   }
 }

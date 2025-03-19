@@ -17,7 +17,14 @@ async function main() {
   const port = getServerPort();
 
   const adapterContainer = initializeAdapters(apiKeys);
-  const di = AppDI.initialize(adapterContainer);
+  const diResult = AppDI.initialize(adapterContainer);
+
+  if (diResult.isErr()) {
+    console.error(`Failed to initialize DI container: ${diResult.error.message}`);
+    Deno.exit(1);
+  }
+
+  const di = diResult.value;
 
   const app = new Hono();
   app.use(logger());
@@ -31,7 +38,13 @@ async function main() {
     });
   });
 
-  app.route("/mcp", di.getMcpRouter());
+  const routerResult = di.getMcpRouter();
+  if (routerResult.isErr()) {
+    console.error(`Failed to get MCP router: ${routerResult.error.message}`);
+    Deno.exit(1);
+  }
+
+  app.route("/mcp", routerResult.value);
 
   app.notFound((c) => {
     return c.json(createErrorResponse("Not Found"), { status: 404 });

@@ -9,7 +9,7 @@
 
 import { loadApiKeys } from "./src/config/env.ts";
 import { initializeAdapters } from "./src/config/adapters.ts";
-import { AppDI } from "./src/config/DependencyInjection.ts";
+import { AppDI, DIError } from "./src/config/DependencyInjection.ts";
 import { err, fromThrowable, ok, Result, ResultAsync } from "neverthrow";
 
 const encoder = new TextEncoder();
@@ -17,17 +17,11 @@ const logToStderr = (message: string) => {
   Deno.stderr.writeSync(encoder.encode(message + "\n"));
 };
 
-type SetupError = {
-  type: "setup";
-  message: string;
-};
-
-type ServerError = {
-  type: "server";
-  message: string;
-};
-
-type CliError = SetupError | ServerError;
+// 複合エラー型
+type CliError =
+  | { type: "setup"; message: string }
+  | { type: "server"; message: string }
+  | { type: "di"; error: DIError };
 
 /**
  * Setup the dependency injection container
@@ -65,9 +59,16 @@ function setupDependencyInjection(): Result<AppDI, CliError> {
 
   // Create dependency injection container
   const adapterContainer = initAdaptersResult.value;
-  const di = AppDI.initialize(adapterContainer);
+  const diResult = AppDI.initialize(adapterContainer);
 
-  return ok(di);
+  if (diResult.isErr()) {
+    return err({
+      type: "di",
+      error: diResult.error,
+    });
+  }
+
+  return ok(diResult.value);
 }
 
 /**
@@ -85,14 +86,18 @@ function startServer(): ResultAsync<void, CliError> {
       logToStderr("- prompts: minimal implementation");
 
       return ResultAsync.fromPromise(
-        di.startMcpServer().then((result) =>
-          result.match(
-            () => undefined,
-            (e) => {
-              throw e;
-            },
-          )
-        ),
+        di.startMcpServer()
+          .then((result) => {
+            if (result.isErr()) {
+              const error = result.error;
+              if (error instanceof Error) {
+                throw error;
+              } else {
+                throw new Error(`DI error: ${error.type} - ${error.message}`);
+              }
+            }
+            return undefined;
+          }),
         (error) => ({
           type: "server",
           message: `Server error: ${error instanceof Error ? error.message : String(error)}`,
@@ -104,10 +109,21 @@ function startServer(): ResultAsync<void, CliError> {
         Promise.resolve(undefined),
         () => ({
           type: "server",
-          message: `Error from setup: ${error.message}`,
+          message: `Error from setup: ${getErrorMessage(error)}`,
         }),
       ),
   );
+}
+
+// エラーメッセージを取得する関数
+function getErrorMessage(error: CliError): string {
+  switch (error.type) {
+    case "setup":
+    case "server":
+      return error.message;
+    case "di":
+      return `DI error: ${error.error.type} - ${error.error.message}`;
+  }
 }
 
 // Start the server
@@ -118,7 +134,7 @@ startServer()
         // Do nothing on normal termination
       },
       (error) => {
-        logToStderr(`Fatal error: ${error.message}`);
+        logToStderr(`Fatal error: ${getErrorMessage(error)}`);
         Deno.exit(1);
       },
     );
