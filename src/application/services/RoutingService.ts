@@ -234,7 +234,7 @@ export class RoutingService {
   }
 
   private getRepositoriesForCategory(category: QueryCategory, query: string): SearchRepository[] {
-    // 日本語のクエリの場合はWikipediaAdapterのみを使用する
+    // Japanese query case, use WikipediaAdapter only
     const hasJapaneseCharacters =
       /[\u3000-\u303F\u3040-\u309F\u30A0-\u30FF\uFF00-\uFFEF\u4E00-\u9FAF]/.test(query);
 

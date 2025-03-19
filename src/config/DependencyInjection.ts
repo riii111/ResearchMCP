@@ -11,7 +11,6 @@ import { SearchController } from "../adapters/in/http/SearchController.ts";
 import { err, ok, Result } from "neverthrow";
 import { AdapterContainer } from "./adapters.ts";
 
-// エラー型定義
 export type DIError =
   | { type: "already_initialized"; message: string }
   | { type: "not_initialized"; message: string }

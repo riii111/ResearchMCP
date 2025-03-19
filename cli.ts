@@ -17,7 +17,6 @@ const logToStderr = (message: string) => {
   Deno.stderr.writeSync(encoder.encode(message + "\n"));
 };
 
-// 複合エラー型
 type CliError =
   | { type: "setup"; message: string }
   | { type: "server"; message: string }
@@ -114,7 +113,6 @@ function startServer(): ResultAsync<void, CliError> {
   );
 }
 
-// エラーメッセージを取得する関数
 function getErrorMessage(error: CliError): string {
   switch (error.type) {
     case "setup":

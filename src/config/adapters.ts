@@ -21,7 +21,6 @@ export interface AdapterContainer {
   classifier: QueryClassifierAdapter;
 }
 
-// アダプター初期化エラー型
 export type AdapterInitError = {
   type: "no_adapters";
   message: string;
