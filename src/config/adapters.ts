@@ -51,8 +51,8 @@ export function initializeAdapters(apiKeys: ApiKeys): Result<AdapterContainer, A
     log("Tavily API integration disabled (no API key)");
   }
 
-  registerWikipediaAdapter(memoryCacheAdapter);
-  log("Registered WikipediaAdapter");
+  registerWikipediaAdapter(memoryCacheAdapter, "ja");
+  log("Registered WikipediaAdapter (Japanese)");
 
   // TODO(@riii111) GitHub API and StackExchange API integration is disabled for now
   // if (apiKeys.github) {

@@ -8,6 +8,7 @@ import {
 import { QueryCategory } from "../../domain/models/routing.ts";
 import { QueryClassifierPort } from "../ports/out/QueryClassifierPort.ts";
 import { SearchRepository } from "../ports/out/SearchRepository.ts";
+import { debug, info } from "../../utils/logger.ts";
 
 /**
  * Service for routing search queries to appropriate search repositories
@@ -49,49 +50,35 @@ export class RoutingService {
 
     const selectedRepositories = repositories;
 
-    const encoder = new TextEncoder();
-    const logHeader = "[PARALLEL_SEARCH]";
-    Deno.stderr.writeSync(
-      encoder.encode(
-        `${logHeader} Query category: ${resolvedCategory}, Query: "${params.q.substring(0, 50)}${
-          params.q.length > 50 ? "..." : ""
-        }"\n`,
-      ),
+    info(
+      `[PARALLEL_SEARCH] Query category: ${resolvedCategory}, Query: "${params.q.substring(0, 50)}${
+        params.q.length > 50 ? "..." : ""
+      }"`,
     );
 
     // Log all registered repositories
-    Deno.stderr.writeSync(
-      encoder.encode(
-        `${logHeader} All registered repositories: ${this.searchRepositories.length}\n`,
-      ),
-    );
+    info(`[PARALLEL_SEARCH] All registered repositories: ${this.searchRepositories.length}`);
     for (const repo of this.searchRepositories) {
-      Deno.stderr.writeSync(
-        encoder.encode(
-          `${logHeader} - Repository: ${repo.getId()} (${repo.getName()}), Categories: ${
-            repo.getSupportedCategories().join(", ")
-          }\n`,
-        ),
+      info(
+        `[PARALLEL_SEARCH] - Repository: ${repo.getId()} (${repo.getName()}), Categories: ${
+          repo.getSupportedCategories().join(", ")
+        }`,
       );
     }
 
-    Deno.stderr.writeSync(
-      encoder.encode(
-        `${logHeader} Available repositories: ${
-          repositories.map((r) =>
-            `${r.getId()} (${r.getName()}, score=${
-              r.getRelevanceScore(params.q, resolvedCategory).toFixed(2)
-            })`
-          ).join(", ")
-        }\n`,
-      ),
+    info(
+      `[PARALLEL_SEARCH] Available repositories: ${
+        repositories.map((r) =>
+          `${r.getId()} (${r.getName()}, score=${
+            r.getRelevanceScore(params.q, resolvedCategory).toFixed(2)
+          })`
+        ).join(", ")
+      }`,
     );
-    Deno.stderr.writeSync(
-      encoder.encode(
-        `${logHeader} Selected repositories for parallel search: ${
-          selectedRepositories.map((r) => `${r.getId()} (${r.getName()})`).join(", ")
-        }\n`,
-      ),
+    info(
+      `[PARALLEL_SEARCH] Selected repositories for parallel search: ${
+        selectedRepositories.map((r) => `${r.getId()} (${r.getName()})`).join(", ")
+      }`,
     );
 
     return ResultAsync.fromPromise(
@@ -111,7 +98,17 @@ export class RoutingService {
     params: QueryParams,
   ): Promise<Result<SearchResponse, SearchError>> {
     const startTime = Date.now();
-    const encoder = new TextEncoder();
+
+    // Log query and selected repositories
+    debug(
+      `[PARALLEL_SEARCH_DETAIL] Executing search for query: "${params.q}" with ${repositories.length} repositories`,
+    );
+
+    for (const repo of repositories) {
+      debug(
+        `[PARALLEL_SEARCH_DETAIL] - Using repository: ${repo.getId()} (${repo.getName()})`,
+      );
+    }
 
     // Execute all search promises
     const searchPromises = repositories.map((repository) => repository.search(params));
@@ -121,6 +118,28 @@ export class RoutingService {
     const successResults = searchResults.filter((result) => result.isOk());
     const failedResults = searchResults.filter((result) => result.isErr());
 
+    // Log success and failure counts
+    info(
+      `[PARALLEL_SEARCH_DETAIL] Results: ${successResults.length} succeeded, ${failedResults.length} failed`,
+    );
+
+    // Log successful repositories
+    for (let i = 0; i < successResults.length; i++) {
+      const result = successResults[i];
+      if (result.isOk()) {
+        const repoIndex = searchResults.indexOf(result);
+        const repoName = repoIndex >= 0 && repoIndex < repositories.length
+          ? repositories[repoIndex].getName()
+          : "Unknown";
+        const resultCount = result.value.results.length;
+
+        info(
+          `[PARALLEL_SEARCH_DETAIL] Repository ${repoName} succeeded with ${resultCount} results`,
+        );
+      }
+    }
+
+    // Log failed repositories
     for (let i = 0; i < failedResults.length; i++) {
       const result = failedResults[i];
       if (result.isErr()) {
@@ -130,10 +149,8 @@ export class RoutingService {
           ? repositories[repoIndex].getName()
           : "Unknown";
 
-        Deno.stderr.writeSync(
-          encoder.encode(
-            `[SEARCH_ERROR] Repository ${repoName} failed: ${error.type} - ${error.message}\n`,
-          ),
+        info(
+          `[SEARCH_ERROR] Repository ${repoName} failed: ${error.type} - ${error.message}`,
         );
       }
     }
@@ -185,26 +202,18 @@ export class RoutingService {
     const uniqueResults = this.deduplicateResults(mergedResults);
     const sortedResults = this.sortByRelevance(uniqueResults);
 
-    const encoder = new TextEncoder();
-    const logHeader = "[PARALLEL_SEARCH_RESULTS]";
-    Deno.stderr.writeSync(
-      encoder.encode(
-        `${logHeader} Total raw results: ${mergedResults.length}, Unique results after deduplication: ${uniqueResults.length}\n`,
-      ),
+    info(
+      `[PARALLEL_SEARCH_RESULTS] Total raw results: ${mergedResults.length}, Unique results after deduplication: ${uniqueResults.length}`,
     );
-    Deno.stderr.writeSync(
-      encoder.encode(
-        `${logHeader} Results per source: ${
-          Object.entries(sourceCounts)
-            .map(([source, count]) => `${source}: ${count}`)
-            .join(", ")
-        }\n`,
-      ),
+    info(
+      `[PARALLEL_SEARCH_RESULTS] Results per source: ${
+        Object.entries(sourceCounts)
+          .map(([source, count]) => `${source}: ${count}`)
+          .join(", ")
+      }`,
     );
-    Deno.stderr.writeSync(
-      encoder.encode(
-        `${logHeader} Total search time: ${Date.now() - startTime}ms\n`,
-      ),
+    info(
+      `[PARALLEL_SEARCH_RESULTS] Total search time: ${Date.now() - startTime}ms`,
     );
 
     return {
@@ -225,6 +234,18 @@ export class RoutingService {
   }
 
   private getRepositoriesForCategory(category: QueryCategory, query: string): SearchRepository[] {
+    // 日本語のクエリの場合はWikipediaAdapterのみを使用する
+    const hasJapaneseCharacters =
+      /[\u3000-\u303F\u3040-\u309F\u30A0-\u30FF\uFF00-\uFFEF\u4E00-\u9FAF]/.test(query);
+
+    if (hasJapaneseCharacters) {
+      debug(`Query contains Japanese characters, using Wikipedia adapter only`);
+      return this.searchRepositories.filter((repository) =>
+        repository.getId() === "wikipedia" &&
+        repository.getSupportedCategories().includes(category)
+      );
+    }
+
     const supportingRepositories = this.searchRepositories.filter((repository) =>
       repository.getSupportedCategories().includes(category)
     );
