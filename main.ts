@@ -16,7 +16,13 @@ async function main() {
   const apiKeys = loadApiKeys();
   const port = getServerPort();
 
-  const adapterContainer = initializeAdapters(apiKeys);
+  const adapterResult = initializeAdapters(apiKeys);
+  if (adapterResult.isErr()) {
+    console.error(`Failed to initialize adapters: ${adapterResult.error.message}`);
+    Deno.exit(1);
+  }
+
+  const adapterContainer = adapterResult.value;
   const diResult = AppDI.initialize(adapterContainer);
 
   if (diResult.isErr()) {
