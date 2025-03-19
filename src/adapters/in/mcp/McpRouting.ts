@@ -1,11 +1,11 @@
 import { Hono } from "hono";
-import { SearchUseCase } from "../../../application/ports/in/SearchUseCase.ts";
-import { McpController } from "./McpController.ts";
+import { AppDI } from "../../../config/DependencyInjection.ts";
 
 /**
  * Factory function to create MCP routes
  */
-export function createMcpRouter(searchUseCase: SearchUseCase): Hono {
-  const mcpController = new McpController(searchUseCase);
-  return mcpController.createRouter();
+export function createMcpRouter(): Hono {
+  const di = AppDI.getInstance();
+  const controller = di.getMcpController();
+  return controller.createRouter();
 }

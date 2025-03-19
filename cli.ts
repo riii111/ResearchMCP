@@ -9,7 +9,7 @@
 
 import { loadApiKeys } from "./src/config/env.ts";
 import { initializeAdapters } from "./src/config/adapters.ts";
-import { DependencyInjection } from "./src/config/DependencyInjection.ts";
+import { AppDI } from "./src/config/DependencyInjection.ts";
 import { err, fromThrowable, ok, Result, ResultAsync } from "neverthrow";
 
 const encoder = new TextEncoder();
@@ -32,7 +32,7 @@ type CliError = SetupError | ServerError;
 /**
  * Setup the dependency injection container
  */
-function setupDependencyInjection(): Result<DependencyInjection, CliError> {
+function setupDependencyInjection(): Result<AppDI, CliError> {
   // Load API keys
   const loadApiKeysResult = fromThrowable(
     loadApiKeys,
@@ -65,7 +65,7 @@ function setupDependencyInjection(): Result<DependencyInjection, CliError> {
 
   // Create dependency injection container
   const adapterContainer = initAdaptersResult.value;
-  const di = DependencyInjection.fromAdapterContainer(adapterContainer);
+  const di = AppDI.initialize(adapterContainer);
 
   return ok(di);
 }

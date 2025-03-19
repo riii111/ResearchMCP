@@ -8,27 +8,42 @@ import { RoutingService } from "../application/services/RoutingService.ts";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
 import { McpController } from "../adapters/in/mcp/McpController.ts";
-import { createMcpRouter } from "../adapters/in/mcp/McpRouting.ts";
 import { SearchController } from "../adapters/in/http/SearchController.ts";
 import { err, ok, Result } from "neverthrow";
 import { AdapterContainer } from "./adapters.ts";
 
-export class DependencyInjection {
+export class AppDI {
+  private static instance: AppDI | null = null;
+
   private searchRepositories: SearchRepository[] = [];
   private queryClassifier?: QueryClassifierPort;
-  private cacheRepository?: CacheRepository;
   private routingService?: RoutingService;
   private searchService?: SearchService;
-  private adapterContainer?: AdapterContainer;
+  private mcpController?: McpController;
+  private httpController?: SearchController;
 
-  constructor(adapterContainer?: AdapterContainer) {
-    this.adapterContainer = adapterContainer;
+  private constructor() {}
 
-    if (adapterContainer) {
-      this.registerCacheRepository(adapterContainer.cache);
-      this.registerQueryClassifier(adapterContainer.classifier);
-      this.registerSearchRepository(adapterContainer.search);
+  static initialize(adapterContainer: AdapterContainer): AppDI {
+    if (AppDI.instance !== null) {
+      throw new Error("DependencyInjection already initialized");
     }
+
+    AppDI.instance = new AppDI();
+    const di = AppDI.instance;
+
+    di.registerSearchRepository(adapterContainer.search);
+    di.registerQueryClassifier(adapterContainer.classifier);
+
+    return di;
+  }
+
+  static getInstance(): AppDI {
+    if (AppDI.instance === null) {
+      throw new Error("DependencyInjection not initialized. Call initialize() first.");
+    }
+
+    return AppDI.instance;
   }
 
   registerSearchRepository(repository: SearchRepository | SearchRepository[]): this {
@@ -42,11 +57,6 @@ export class DependencyInjection {
 
   registerQueryClassifier(classifier: QueryClassifierPort): this {
     this.queryClassifier = classifier;
-    return this;
-  }
-
-  registerCacheRepository(repository: CacheRepository): this {
-    this.cacheRepository = repository;
     return this;
   }
 
@@ -74,8 +84,6 @@ export class DependencyInjection {
     return this.searchService;
   }
 
-  private mcpController?: McpController;
-
   getMcpController(): McpController {
     if (!this.mcpController) {
       const searchService = this.getSearchService();
@@ -90,8 +98,11 @@ export class DependencyInjection {
   }
 
   getHttpController(): SearchController {
-    const searchService = this.getSearchService();
-    return new SearchController(searchService);
+    if (!this.httpController) {
+      const searchService = this.getSearchService();
+      this.httpController = new SearchController(searchService);
+    }
+    return this.httpController;
   }
 
   getHttpRouter(): Hono {
@@ -109,19 +120,18 @@ export class DependencyInjection {
       name: "ResearchMCP",
       version: "0.1.0",
       capabilities: {
-        resources: {}, // Enable resources capability
-        prompts: {}, // Enable prompts capability
+        resources: {},
+        prompts: {},
       },
     });
 
-    // Register an empty prompt to support prompts/list method
     server.prompt(
       "empty-prompt",
       "Empty placeholder prompt for MCP protocol compliance",
-      {}, // Empty args schema
+      {},
       (_args) => ({
         messages: [{
-          role: "assistant", // Using "assistant" as per MCP protocol requirements
+          role: "assistant",
           content: {
             type: "text",
             text: "Empty prompt for MCP protocol compliance",
@@ -181,8 +191,11 @@ export class DependencyInjection {
       .then(() => ok(undefined))
       .catch((error: unknown) => err(error instanceof Error ? error : new Error(String(error))));
   }
+}
 
-  static fromAdapterContainer(container: AdapterContainer): DependencyInjection {
-    return new DependencyInjection(container);
+// Legacy class for backward compatibility
+export class DependencyInjection {
+  static fromAdapterContainer(container: AdapterContainer): AppDI {
+    return AppDI.initialize(container);
   }
 }

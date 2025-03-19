@@ -6,7 +6,7 @@ import { logger } from "hono/logger";
 import { secureHeaders } from "hono/secure-headers";
 import { getServerPort, loadApiKeys } from "./src/config/env.ts";
 import { initializeAdapters } from "./src/config/adapters.ts";
-import { DependencyInjection } from "./src/config/DependencyInjection.ts";
+import { AppDI } from "./src/config/DependencyInjection.ts";
 import { ApiError, createErrorResponse } from "./src/adapters/in/http/errors.ts";
 
 /**
@@ -17,7 +17,7 @@ async function main() {
   const port = getServerPort();
 
   const adapterContainer = initializeAdapters(apiKeys);
-  const di = DependencyInjection.fromAdapterContainer(adapterContainer);
+  const di = AppDI.initialize(adapterContainer);
 
   const app = new Hono();
   app.use(logger());
