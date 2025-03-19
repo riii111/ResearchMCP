@@ -120,8 +120,9 @@ export class McpController {
         const publishedDate = result.published
           ? `(${new Date(result.published).toLocaleDateString()})`
           : "";
+        const source = result.source ? `[Source: ${result.source}]` : "";
 
-        return `${index + 1}. ${result.title} ${publishedDate}
+        return `${index + 1}. ${result.title} ${publishedDate} ${source}
    URL: ${result.url}
    ${result.snippet}
 `;

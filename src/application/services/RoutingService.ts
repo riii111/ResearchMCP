@@ -121,10 +121,33 @@ export class RoutingService {
     params: QueryParams,
   ): Promise<SearchResponse> {
     const startTime = Date.now();
+    const encoder = new TextEncoder();
+
+    // Execute all search promises
     const searchPromises = repositories.map((repository) => repository.search(params));
     const searchResults = await Promise.all(searchPromises);
 
+    // Log errors but continue if at least one search succeeded
     const successResults = searchResults.filter((result) => result.isOk());
+    const failedResults = searchResults.filter((result) => result.isErr());
+
+    for (let i = 0; i < failedResults.length; i++) {
+      const result = failedResults[i];
+      if (result.isErr()) {
+        const error = result.error;
+        const repoIndex = searchResults.indexOf(result);
+        const repoName = repoIndex >= 0 && repoIndex < repositories.length
+          ? repositories[repoIndex].getName()
+          : "Unknown";
+
+        Deno.stderr.writeSync(
+          encoder.encode(
+            `[SEARCH_ERROR] Repository ${repoName} failed: ${error.type} - ${error.message}\n`,
+          ),
+        );
+      }
+    }
+
     if (successResults.length === 0) {
       // If all searches failed, return the first error
       const firstError = searchResults[0];
@@ -148,17 +171,21 @@ export class RoutingService {
   ): SearchResponse {
     const mergedResults: SearchResult[] = [];
     const sources: string[] = [];
+    const sourceCounts: Record<string, number> = {};
     let totalResults = 0;
 
     for (const result of successResults) {
       if (result.isOk()) {
         const response = result.value;
-        sources.push(response.source);
+        const source = response.source;
+
+        sources.push(source);
         totalResults += response.totalResults;
+        sourceCounts[source] = response.results.length;
 
         const resultsWithSource = response.results.map((r) => ({
           ...r,
-          source: response.source,
+          source: source,
         }));
 
         mergedResults.push(...resultsWithSource);
@@ -178,12 +205,9 @@ export class RoutingService {
     Deno.stderr.writeSync(
       encoder.encode(
         `${logHeader} Results per source: ${
-          sources.map((source, index) => {
-            const count = successResults[index].isOk()
-              ? successResults[index].value.results.length
-              : 0;
-            return `${source}: ${count}`;
-          }).join(", ")
+          Object.entries(sourceCounts)
+            .map(([source, count]) => `${source}: ${count}`)
+            .join(", ")
         }\n`,
       ),
     );
