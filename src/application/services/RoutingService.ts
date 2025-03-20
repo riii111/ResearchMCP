@@ -234,18 +234,6 @@ export class RoutingService {
   }
 
   private getRepositoriesForCategory(category: QueryCategory, query: string): SearchRepository[] {
-    // Japanese query case, use WikipediaAdapter only
-    const hasJapaneseCharacters =
-      /[\u3000-\u303F\u3040-\u309F\u30A0-\u30FF\uFF00-\uFFEF\u4E00-\u9FAF]/.test(query);
-
-    if (hasJapaneseCharacters) {
-      debug(`Query contains Japanese characters, using Wikipedia adapter only`);
-      return this.searchRepositories.filter((repository) =>
-        repository.getId() === "wikipedia" &&
-        repository.getSupportedCategories().includes(category)
-      );
-    }
-
     const supportingRepositories = this.searchRepositories.filter((repository) =>
       repository.getSupportedCategories().includes(category)
     );

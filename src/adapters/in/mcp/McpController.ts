@@ -81,6 +81,9 @@ export class McpController {
             let errorMessage = "";
 
             switch (err.type) {
+              case "invalidQuery":
+                errorMessage = `${err.message}${err.issues ? "\n\n" + err.issues.join("\n") : ""}`;
+                break;
               case "validation":
                 errorMessage = `Validation error: ${err.message}`;
                 break;
