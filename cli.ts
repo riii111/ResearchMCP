@@ -7,12 +7,9 @@
  * Available for use from MCP clients such as Claude Desktop.
  */
 
-import { loadApiKeys } from "./src/setup/env.ts";
-import { initializeAdapters } from "./src/setup/adapters.ts";
-import { SearchService } from "./src/services/searchService.ts";
-import { RoutingService } from "./src/services/routingService.ts";
-import { createMcpServer, startMcpStdioServer } from "./src/services/mcpService.ts";
-import { QueryClassifierService } from "./src/services/queryClassifierService.ts";
+import { loadApiKeys } from "./src/config/env.ts";
+import { initializeAdapters } from "./src/config/adapters.ts";
+import { appDI, DIError } from "./src/config/AppDI.ts";
 import { err, fromThrowable, ok, Result, ResultAsync } from "neverthrow";
 
 const encoder = new TextEncoder();
@@ -20,26 +17,21 @@ const logToStderr = (message: string) => {
   Deno.stderr.writeSync(encoder.encode(message + "\n"));
 };
 
-type SetupError = {
-  type: "setup";
-  message: string;
-};
+type CliError =
+  | { type: "setup"; message: string }
+  | { type: "server"; message: string }
+  | { type: "di"; error: DIError };
 
-type ServerError = {
-  type: "server";
-  message: string;
-};
-
-type CliError = SetupError | ServerError;
-
-function setupServices(): Result<SearchService, CliError> {
+/**
+ * Setup the dependency injection container
+ */
+function setupDI(): Result<typeof appDI, CliError> {
+  // Load API keys
   const loadApiKeysResult = fromThrowable(
     loadApiKeys,
     (error): CliError => ({
       type: "setup",
-      message: `Failed to setup services: ${
-        error instanceof Error ? error.message : String(error)
-      }`,
+      message: `Failed to load API keys: ${error instanceof Error ? error.message : String(error)}`,
     }),
   )();
 
@@ -49,50 +41,62 @@ function setupServices(): Result<SearchService, CliError> {
 
   const apiKeys = loadApiKeysResult.value;
 
-  const initAdaptersResult = fromThrowable(
-    () => initializeAdapters(apiKeys),
-    (error): CliError => ({
-      type: "setup",
-      message: `Failed to initialize adapters: ${
-        error instanceof Error ? error.message : String(error)
-      }`,
-    }),
-  )();
-
+  // Initialize adapters
+  const initAdaptersResult = initializeAdapters(apiKeys);
   if (initAdaptersResult.isErr()) {
-    return err(initAdaptersResult.error);
+    return err({
+      type: "setup",
+      message: `Failed to initialize adapters: ${initAdaptersResult.error.message}`,
+    });
   }
 
-  const queryClassifier = new QueryClassifierService();
-  const routingService = new RoutingService(queryClassifier);
-  const searchService = new SearchService(routingService);
+  // Create dependency injection container
+  const adapterContainer = initAdaptersResult.value;
+  const diResult = appDI.initialize(adapterContainer);
 
-  return ok(searchService);
+  if (diResult.isErr()) {
+    return err({
+      type: "di",
+      error: diResult.error,
+    });
+  }
+
+  return ok(appDI);
 }
 
+/**
+ * Start the MCP server
+ */
 function startServer(): ResultAsync<void, CliError> {
-  const serviceResult = setupServices();
+  const diResult = setupDI();
 
-  return serviceResult.match(
-    (searchService) => {
+  return diResult.match(
+    (di) => {
       logToStderr("Starting ResearchMCP server...");
       logToStderr("Server capabilities:");
       logToStderr("- search tool: enabled");
       logToStderr("- resources: minimal implementation");
       logToStderr("- prompts: minimal implementation");
 
-      const mcpServer = createMcpServer(searchService);
-
       return ResultAsync.fromPromise(
-        startMcpStdioServer(mcpServer).then((result) =>
-          result.match(
-            () => undefined,
-            (e) => {
-              throw e;
-            },
-          )
-        ),
-        (error) => ({
+        di.startMcpServer().then((result) => {
+          if (result.isErr()) {
+            const error = result.error;
+            if (error instanceof Error) {
+              return Promise.reject({
+                type: "server",
+                message: `Server error: ${error.message}`,
+              });
+            } else {
+              return Promise.reject({
+                type: "di",
+                message: `DI error: ${error.type} - ${error.message}`,
+              });
+            }
+          }
+          return Promise.resolve(undefined);
+        }),
+        (error): CliError => ({
           type: "server",
           message: `Server error: ${error instanceof Error ? error.message : String(error)}`,
         }),
@@ -103,12 +107,23 @@ function startServer(): ResultAsync<void, CliError> {
         Promise.resolve(undefined),
         () => ({
           type: "server",
-          message: `Error from setup: ${error.message}`,
+          message: `Error from setup: ${getErrorMessage(error)}`,
         }),
       ),
   );
 }
 
+function getErrorMessage(error: CliError): string {
+  switch (error.type) {
+    case "setup":
+    case "server":
+      return error.message;
+    case "di":
+      return `DI error: ${error.error.type} - ${error.error.message}`;
+  }
+}
+
+// Start the server
 startServer()
   .then((result) => {
     result.match(
@@ -116,7 +131,7 @@ startServer()
         // Do nothing on normal termination
       },
       (error) => {
-        logToStderr(`Fatal error: ${error.message}`);
+        logToStderr(`Fatal error: ${getErrorMessage(error)}`);
         Deno.exit(1);
       },
     );

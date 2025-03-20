@@ -4,67 +4,83 @@
 import { Hono } from "hono";
 import { logger } from "hono/logger";
 import { secureHeaders } from "hono/secure-headers";
-import { getServerPort, loadApiKeys } from "./src/setup/env.ts";
-import { initializeAdapters } from "./src/setup/adapters.ts";
-import { QueryClassifierService } from "./src/services/queryClassifierService.ts";
-import { RoutingService } from "./src/services/routingService.ts";
-import { SearchService } from "./src/services/searchService.ts";
-import { ResearchService } from "./src/services/researchService.ts";
-import { createMcpRouter } from "./src/routes/mcp.ts";
-import { createResearchRouter } from "./src/routes/research.ts";
-import { ApiError, createErrorResponse } from "./src/utils/errors.ts";
+import { getServerPort, loadApiKeys } from "./src/config/env.ts";
+import { initializeAdapters } from "./src/config/adapters.ts";
+import { appDI } from "./src/config/AppDI.ts";
+import { ApiError, createErrorResponse } from "./src/adapters/in/http/errors.ts";
+import { error, info } from "./src/config/logger.ts";
 
-const apiKeys = loadApiKeys();
-const port = getServerPort();
+/**
+ * Main entry point for the HTTP server
+ */
+async function main() {
+  const apiKeys = loadApiKeys();
+  const port = getServerPort();
 
-const app = new Hono();
-app.use(logger());
-app.use(secureHeaders());
-
-const adapters = initializeAdapters(apiKeys);
-
-const queryClassifier = new QueryClassifierService();
-const routingService = new RoutingService(queryClassifier);
-const searchService = new SearchService(routingService);
-
-app.get("/", (c) => {
-  return c.json({
-    name: "ResearchMCP",
-    status: "running",
-    version: "0.2.0",
-  });
-});
-
-app.route("/mcp", createMcpRouter(searchService));
-
-if (adapters.claude) {
-  const researchService = new ResearchService(searchService, adapters.claude);
-  app.route("/research", createResearchRouter(researchService));
-}
-
-app.notFound((c) => {
-  return c.json(createErrorResponse("Not Found"), { status: 404 });
-});
-
-app.onError((err, c) => {
-  console.error(`Error: ${err}`);
-
-  if (err instanceof ApiError) {
-    return c.json(
-      createErrorResponse(err.message, err.details),
-      { status: err.status },
-    );
+  const adapterResult = initializeAdapters(apiKeys);
+  if (adapterResult.isErr()) {
+    error(`Failed to initialize adapters: ${adapterResult.error.message}`);
+    Deno.exit(1);
   }
 
-  // Unhandled error
-  const message = err instanceof Error ? err.message : "Internal Server Error";
-  return c.json(
-    createErrorResponse(message),
-    { status: 500 },
+  const adapterContainer = adapterResult.value;
+  appDI.initialize(adapterContainer).match(
+    (di) => di,
+    (err) => {
+      error(`Failed to initialize DI container: ${err.message}`);
+      Deno.exit(1);
+    },
   );
+
+  const routerResult = appDI.getMcpRouter().match(
+    (router) => router,
+    (err) => {
+      error(`Failed to get MCP router: ${err.message}`);
+      Deno.exit(1);
+    },
+  );
+
+  const app = new Hono();
+  app.use(logger());
+  app.use(secureHeaders());
+
+  app.get("/", (c) => {
+    return c.json({
+      name: "ResearchMCP",
+      status: "running",
+      version: "0.3.0",
+    });
+  });
+
+  app.route("/mcp", routerResult);
+
+  app.notFound((c) => {
+    return c.json(createErrorResponse("Not Found"), { status: 404 });
+  });
+
+  app.onError((err, c) => {
+    error(`Error: ${err}`);
+
+    if (err instanceof ApiError) {
+      return c.json(
+        createErrorResponse(err.message, err.details),
+        { status: err.status },
+      );
+    }
+
+    const message = err instanceof Error ? err.message : "Internal Server Error";
+    return c.json(
+      createErrorResponse(message),
+      { status: 500 },
+    );
+  });
+
+  info(`Server running on http://localhost:${port}`);
+
+  await Deno.serve({ port }, app.fetch);
+}
+
+main().catch((err) => {
+  error(`Fatal error: ${err}`);
+  Deno.exit(1);
 });
-
-console.log(`Server running on http://localhost:${port}`);
-
-// @ts-ignore: Type definition mismatch in Deno.serve API
-Deno.serve({ port }, app.fetch);
