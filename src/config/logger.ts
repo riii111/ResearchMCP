@@ -19,9 +19,11 @@ function getLogLevel(): log.LevelName {
 
 // Special formatter that outputs to stderr for JSON-RPC compatibility
 class StderrConsoleHandler extends log.handlers.ConsoleHandler {
+  private encoder = new TextEncoder();
+
   override log(msg: string): void {
     // Use stderr instead of console.log
-    Deno.stderr.writeSync(new TextEncoder().encode(msg + "\n"));
+    Deno.stderr.writeSync(this.encoder.encode(msg + "\n"));
   }
 }
 
