@@ -27,7 +27,6 @@ class StderrConsoleHandler extends log.handlers.ConsoleHandler {
   }
 }
 
-// Configure logger
 await log.setup({
   handlers: {
     console: new StderrConsoleHandler(getLogLevel(), {
