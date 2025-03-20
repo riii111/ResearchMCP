@@ -17,14 +17,21 @@ function getLogLevel(): log.LevelName {
   }
 }
 
-// Configure logger to use stderr for JSON-RPC compatibility
+// Special formatter that outputs to stderr for JSON-RPC compatibility
+class StderrConsoleHandler extends log.handlers.ConsoleHandler {
+  override log(msg: string): void {
+    // Use stderr instead of console.log
+    Deno.stderr.writeSync(new TextEncoder().encode(msg + "\n"));
+  }
+}
+
+// Configure logger
 await log.setup({
   handlers: {
-    console: new log.handlers.ConsoleHandler(getLogLevel(), {
+    console: new StderrConsoleHandler(getLogLevel(), {
       formatter: (logRecord) => {
         return `[${logRecord.levelName}] ${logRecord.msg}`;
       },
-      stderr: true,
     }),
   },
   loggers: {
