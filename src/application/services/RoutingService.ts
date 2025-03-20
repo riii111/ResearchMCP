@@ -92,85 +92,85 @@ export class RoutingService {
     debug(
       `[PARALLEL_SEARCH_DETAIL] Executing search for query: "${params.q}" with ${repositories.length} repositories`,
     );
+    repositories.forEach((repo) =>
+      debug(`[PARALLEL_SEARCH_DETAIL] - Using repository: ${repo.getId()} (${repo.getName()})`)
+    );
 
-    for (const repo of repositories) {
-      debug(
-        `[PARALLEL_SEARCH_DETAIL] - Using repository: ${repo.getId()} (${repo.getName()})`,
-      );
+    const searchResults = repositories.map((repository) => ({
+      repository,
+      resultPromise: repository.search(params),
+    }));
+
+    // Execute parallel searches
+    return ResultAsync.fromSafePromise(
+      Promise.all(searchResults.map((item) => item.resultPromise)),
+    ).andThen((results) => {
+      const searchWithResults = searchResults.map((item, index) => ({
+        repository: item.repository,
+        result: results[index],
+      }));
+
+      this.logSearchResults(searchWithResults);
+
+      return this.processSearchResults(searchWithResults, params, startTime);
+    });
+  }
+
+  private processSearchResults(
+    searchWithResults: Array<
+      { repository: SearchRepository; result: Result<SearchResponse, SearchError> }
+    >,
+    params: QueryParams,
+    startTime: number,
+  ): ResultAsync<SearchResponse, SearchError> {
+    const successResults = searchWithResults
+      .filter((item) => item.result.isOk())
+      .map((item) => item.result as Result<SearchResponse, never>);
+
+    if (successResults.length > 0) {
+      const mergedResults = this.mergeSearchResults(successResults, params, startTime);
+      return ResultAsync.fromSafePromise(Promise.resolve(mergedResults));
     }
 
-    const searchPromises = repositories.map((repository) => repository.search(params));
+    const firstError = searchWithResults
+      .find((item) => item.result.isErr())
+      ?.result;
 
-    return ResultAsync.fromSafePromise(Promise.all(searchPromises))
-      .andThen((results) => {
-        this.logSearchResults(results, repositories);
+    const errorPayload = firstError?.isErr()
+      ? firstError.error
+      : { type: "network" as const, message: "All search repositories failed" };
 
-        const successResults = results.filter((result) => result.isOk());
-        const failedResults = results.filter((result) => result.isErr());
-
-        if (successResults.length === 0) {
-          if (failedResults.length > 0) {
-            const firstError = failedResults[0];
-            return ResultAsync.fromPromise(
-              Promise.reject(firstError.error),
-              (e) => e as SearchError,
-            );
-          }
-
-          return ResultAsync.fromPromise(
-            Promise.reject({
-              type: "network",
-              message: "All search repositories failed",
-            }),
-            (e) => e as SearchError,
-          );
-        }
-
-        const mergedResults = this.mergeSearchResults(successResults, params, startTime);
-        return ResultAsync.fromSafePromise(Promise.resolve(mergedResults));
-      });
+    return ResultAsync.fromPromise(
+      Promise.reject(errorPayload),
+      (e) => e as SearchError,
+    );
   }
 
   private logSearchResults(
-    searchResults: Result<SearchResponse, SearchError>[],
-    repositories: SearchRepository[],
+    searchWithResults: Array<
+      { repository: SearchRepository; result: Result<SearchResponse, SearchError> }
+    >,
   ): void {
-    const successResults = searchResults.filter((result) => result.isOk());
-    const failedResults = searchResults.filter((result) => result.isErr());
+    const successItems = searchWithResults.filter((item) => item.result.isOk());
+    const failedItems = searchWithResults.filter((item) => item.result.isErr());
 
     info(
-      `[PARALLEL_SEARCH_DETAIL] Results: ${successResults.length} succeeded, ${failedResults.length} failed`,
+      `[PARALLEL_SEARCH_DETAIL] Results: ${successItems.length} succeeded, ${failedItems.length} failed`,
     );
 
-    for (let i = 0; i < successResults.length; i++) {
-      const result = successResults[i];
-      if (result.isOk()) {
-        const repoIndex = searchResults.indexOf(result);
-        const repoName = repoIndex >= 0 && repoIndex < repositories.length
-          ? repositories[repoIndex].getName()
-          : "Unknown";
-        const resultCount = result.value.results.length;
+    successItems.forEach((item) => {
+      const resultCount = item.result.isOk() ? item.result.value.results.length : 0;
+      const repoName = item.repository.getName();
+      info(`[PARALLEL_SEARCH_DETAIL] Repository ${repoName} succeeded with ${resultCount} results`);
+    });
 
-        info(
-          `[PARALLEL_SEARCH_DETAIL] Repository ${repoName} succeeded with ${resultCount} results`,
-        );
-      }
-    }
-
-    for (let i = 0; i < failedResults.length; i++) {
-      const result = failedResults[i];
-      if (result.isErr()) {
-        const error = result.error;
-        const repoIndex = searchResults.indexOf(result);
-        const repoName = repoIndex >= 0 && repoIndex < repositories.length
-          ? repositories[repoIndex].getName()
-          : "Unknown";
-
-        info(
-          `[SEARCH_ERROR] Repository ${repoName} failed: ${error.type} - ${error.message}`,
-        );
-      }
-    }
+    failedItems.forEach((item) => {
+      const error = item.result.isErr()
+        ? item.result.error
+        : { type: "unknown", message: "Unknown error" };
+      const repoName = item.repository.getName();
+      info(`[SEARCH_ERROR] Repository ${repoName} failed: ${error.type} - ${error.message}`);
+    });
   }
 
   private mergeSearchResults(
@@ -178,31 +178,39 @@ export class RoutingService {
     params: QueryParams,
     startTime: number,
   ): SearchResponse {
-    const mergedResults: SearchResult[] = [];
-    const sources: string[] = [];
-    const sourceCounts: Record<string, number> = {};
-    let totalResults = 0;
+    const validResponses = successResults
+      .filter((result) => result.isOk())
+      .map((result) => result.value);
 
-    for (const result of successResults) {
-      if (result.isOk()) {
-        const response = result.value;
-        const source = response.source;
+    const sources = validResponses.map((response) => response.source);
 
-        sources.push(source);
-        totalResults += response.totalResults;
-        sourceCounts[source] = response.results.length;
+    // Record result counts per source for analytics
+    const sourceCounts = validResponses.reduce<Record<string, number>>(
+      (counts, response) => ({
+        ...counts,
+        [response.source]: response.results.length,
+      }),
+      {},
+    );
 
-        const resultsWithSource = response.results.map((r) => ({
-          ...r,
-          source: source,
-        }));
+    const totalResults = validResponses.reduce(
+      (total, response) => total + response.totalResults,
+      0,
+    );
 
-        mergedResults.push(...resultsWithSource);
-      }
-    }
+    // Flatten all results and attach source information
+    const mergedResults = validResponses.flatMap((response) =>
+      response.results.map((result) => ({
+        ...result,
+        source: response.source,
+      }))
+    );
 
+    // Remove duplicates and optimize relevance order
     const uniqueResults = this.deduplicateResults(mergedResults);
     const sortedResults = this.sortByRelevance(uniqueResults);
+
+    const searchTime = Date.now() - startTime;
 
     info(
       `[PARALLEL_SEARCH_RESULTS] Total raw results: ${mergedResults.length}, Unique results after deduplication: ${uniqueResults.length}`,
@@ -214,15 +222,13 @@ export class RoutingService {
           .join(", ")
       }`,
     );
-    info(
-      `[PARALLEL_SEARCH_RESULTS] Total search time: ${Date.now() - startTime}ms`,
-    );
+    info(`[PARALLEL_SEARCH_RESULTS] Total search time: ${searchTime}ms`);
 
     return {
       query: params,
       results: sortedResults,
       totalResults,
-      searchTime: Date.now() - startTime,
+      searchTime,
       source: sources.join(","),
     };
   }
