@@ -133,22 +133,13 @@ export class McpController {
     const router = new Hono();
 
     router.post("/search", async (c) => {
-      const jsonResult = await this.parseRequestBody(c);
-      if (jsonResult.isErr()) {
-        return this.handleError(c, jsonResult.error);
-      }
-
-      const validationResult = this.validateRequest(jsonResult.value);
-      if (validationResult.isErr()) {
-        return this.handleError(c, validationResult.error);
-      }
-
-      const searchResult = await this.performSearch(validationResult.value);
-
-      return searchResult.match(
-        (response) => c.json(response as McpSuccessResponse),
-        (error) => this.handleError(c, error),
-      );
+      return await this.parseRequestBody(c)
+        .andThen((data) => this.validateRequest(data))
+        .andThen((request) => this.performSearch(request))
+        .match(
+          (response) => c.json(response as McpSuccessResponse),
+          (error) => this.handleError(c, error),
+        );
     });
 
     return router;
@@ -178,45 +169,41 @@ export class McpController {
   }
 
   private validateRequest(data: unknown): Result<McpRequest, McpError> {
-    const validationResult = this.mcpRequestSchema.safeParse(data);
-
-    if (validationResult.success) {
-      return ok(validationResult.data as McpRequest);
-    } else {
-      return err({
-        type: "validation",
-        message: "Validation error",
-        details: JSON.stringify(validationResult.error.format()),
-      });
-    }
+    return this.mcpRequestSchema.safeParse(data).match(
+      (data) => ok(data as McpRequest),
+      (error) =>
+        err({
+          type: "validation",
+          message: "Validation error",
+          details: JSON.stringify(error.format()),
+        }),
+    );
   }
 
   private async performSearch(request: McpRequest): Promise<Result<McpResponse, McpError>> {
-    const result = await this.searchUseCase.searchMcp(request);
-
-    // Log the search result
-    if (result.isOk()) {
-      const response = result.value;
-      info(
-        `[MCP_CONTROLLER] Search successful, returned ${response.results.length} results from source: ${response.source}`,
-      );
-
-      // Log the first few results
-      const maxResultsToLog = Math.min(3, response.results.length);
-      for (let i = 0; i < maxResultsToLog; i++) {
-        const result = response.results[i];
+    return await this.searchUseCase.searchMcp(request)
+      .map((response) => {
         info(
-          `[MCP_CONTROLLER] Result ${i + 1}: ${result.title} [Source: ${result.source}]`,
+          `[MCP_CONTROLLER] Search successful, returned ${response.results.length} results from source: ${response.source}`,
         );
-      }
-    } else {
-      const err = result.error;
-      error(
-        `[MCP_CONTROLLER] Search failed: ${err.type} - ${err.message}`,
-      );
-    }
 
-    return result;
+        // Log the first few results
+        const maxResultsToLog = Math.min(3, response.results.length);
+        response.results.slice(0, maxResultsToLog).forEach((result, i) => {
+          info(
+            `[MCP_CONTROLLER] Result ${i + 1}: ${result.title} [Source: ${result.source}]`,
+          );
+        });
+
+        return response;
+      })
+      .mapErr((err) => {
+        error(
+          `[MCP_CONTROLLER] Search failed: ${err.type} - ${err.message}`,
+        );
+
+        return err;
+      });
   }
 
   private handleError(c: Context, error: McpControllerError): Response {
