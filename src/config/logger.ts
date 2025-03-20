@@ -8,6 +8,16 @@ let initPromise: Promise<void> | null = null;
 // Create TextEncoder instance once
 const encoder = new TextEncoder();
 
+const isTestEnv = Deno.mainModule.includes("_test") ||
+  Deno.args.some((arg) => arg.includes("test"));
+
+function getEnvOrDefault(key: string, defaultValue: string): string {
+  if (isTestEnv) {
+    return defaultValue;
+  }
+  return Deno.env.get(key)?.toLowerCase() || defaultValue;
+}
+
 function initializeLogger(): Promise<void> {
   if (isInitialized) {
     return Promise.resolve();
@@ -19,7 +29,7 @@ function initializeLogger(): Promise<void> {
 
   isInitializing = true;
 
-  const logLevel = Deno.env.get("LOG_LEVEL")?.toLowerCase() || "info";
+  const logLevel = getEnvOrDefault("LOG_LEVEL", "info");
 
   function getLogLevel(): log.LevelName {
     switch (logLevel) {
