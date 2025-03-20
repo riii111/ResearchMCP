@@ -24,7 +24,8 @@ export class SearchController {
       return c.json({ error: "Search query is required" }, { status: 400 });
     }
 
-    const maxResults = c.req.query("maxResults") ? parseInt(c.req.query("maxResults")!) : 20;
+    const defaultMaxResults = parseInt(Deno.env.get("DEFAULT_MAX_RESULTS") || "15");
+    const maxResults = parseInt(c.req.query("maxResults") || defaultMaxResults.toString());
     const country = c.req.query("country");
     const language = c.req.query("language");
 

@@ -31,7 +31,8 @@ export class SearchService implements SearchUseCase {
 
     const queryParams: QueryParams = {
       q: request.query,
-      maxResults: request.options?.maxResults || 20,
+      maxResults: request.options?.maxResults ||
+        parseInt(Deno.env.get("DEFAULT_MAX_RESULTS") || "15"),
       country: request.options?.country,
       language: request.options?.language,
       routing: {},
