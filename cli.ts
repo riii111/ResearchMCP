@@ -9,7 +9,7 @@
 
 import { loadApiKeys } from "./src/config/env.ts";
 import { initializeAdapters } from "./src/config/adapters.ts";
-import { AppDI, DIError } from "./src/config/AppDI.ts";
+import { appDI, DIError } from "./src/config/AppDI.ts";
 import { err, fromThrowable, ok, Result, ResultAsync } from "neverthrow";
 
 const encoder = new TextEncoder();
@@ -25,7 +25,7 @@ type CliError =
 /**
  * Setup the dependency injection container
  */
-function setupDependencyInjection(): Result<AppDI, CliError> {
+function setupDI(): Result<typeof appDI, CliError> {
   // Load API keys
   const loadApiKeysResult = fromThrowable(
     loadApiKeys,
@@ -52,7 +52,7 @@ function setupDependencyInjection(): Result<AppDI, CliError> {
 
   // Create dependency injection container
   const adapterContainer = initAdaptersResult.value;
-  const diResult = AppDI.initialize(adapterContainer);
+  const diResult = appDI.initialize(adapterContainer);
 
   if (diResult.isErr()) {
     return err({
@@ -61,14 +61,14 @@ function setupDependencyInjection(): Result<AppDI, CliError> {
     });
   }
 
-  return ok(diResult.value);
+  return ok(appDI);
 }
 
 /**
  * Start the MCP server
  */
 function startServer(): ResultAsync<void, CliError> {
-  const diResult = setupDependencyInjection();
+  const diResult = setupDI();
 
   return diResult.match(
     (di) => {

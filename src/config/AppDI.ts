@@ -16,9 +16,10 @@ export type DIError =
   | { type: "not_initialized"; message: string }
   | { type: "missing_dependency"; message: string };
 
+/**
+ * Dependency Injection container for the application
+ */
 export class AppDI {
-  private static instance: AppDI | null = null;
-
   private searchRepositories: SearchRepository[] = [];
   private queryClassifier?: QueryClassifierPort;
   private routingService?: RoutingService;
@@ -26,34 +27,33 @@ export class AppDI {
   private mcpController?: McpController;
   private httpController?: SearchController;
 
-  private constructor() {}
+  private initialized = false;
 
-  static initialize(adapterContainer: AdapterContainer): Result<AppDI, DIError> {
-    if (AppDI.instance !== null) {
+  constructor() {}
+
+  /**
+   * Initialize the DI container with adapters
+   */
+  initialize(adapterContainer: AdapterContainer): Result<this, DIError> {
+    if (this.initialized) {
       return err({
         type: "already_initialized",
-        message: "DependencyInjection already initialized",
+        message: "AppDI already initialized",
       });
     }
 
-    AppDI.instance = new AppDI();
-    const di = AppDI.instance;
+    this.registerSearchRepository(adapterContainer.search);
+    this.registerQueryClassifier(adapterContainer.classifier);
+    this.initialized = true;
 
-    di.registerSearchRepository(adapterContainer.search);
-    di.registerQueryClassifier(adapterContainer.classifier);
-
-    return ok(di);
+    return ok(this);
   }
 
-  static getInstance(): Result<AppDI, DIError> {
-    if (AppDI.instance === null) {
-      return err({
-        type: "not_initialized",
-        message: "DependencyInjection not initialized. Call initialize() first.",
-      });
-    }
-
-    return ok(AppDI.instance);
+  /**
+   * Check if the DI container has been initialized
+   */
+  isInitialized(): boolean {
+    return this.initialized;
   }
 
   registerSearchRepository(repository: SearchRepository | SearchRepository[]): this {
@@ -71,6 +71,13 @@ export class AppDI {
   }
 
   getRoutingService(): Result<RoutingService, DIError> {
+    if (!this.initialized) {
+      return err({
+        type: "not_initialized",
+        message: "DI container not initialized. Call initialize() first.",
+      });
+    }
+
     if (!this.routingService) {
       if (!this.queryClassifier) {
         return err({
@@ -239,9 +246,5 @@ export class AppDI {
   }
 }
 
-// Legacy class for backward compatibility
-export class DependencyInjection {
-  static fromAdapterContainer(container: AdapterContainer): Result<AppDI, DIError> {
-    return AppDI.initialize(container);
-  }
-}
+// Singleton instance of the DI container
+export const appDI = new AppDI();

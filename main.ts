@@ -6,7 +6,7 @@ import { logger } from "hono/logger";
 import { secureHeaders } from "hono/secure-headers";
 import { getServerPort, loadApiKeys } from "./src/config/env.ts";
 import { initializeAdapters } from "./src/config/adapters.ts";
-import { AppDI } from "./src/config/AppDI.ts";
+import { appDI } from "./src/config/AppDI.ts";
 import { ApiError, createErrorResponse } from "./src/adapters/in/http/errors.ts";
 
 /**
@@ -23,14 +23,18 @@ async function main() {
   }
 
   const adapterContainer = adapterResult.value;
-  const diResult = AppDI.initialize(adapterContainer);
+  const diResult = appDI.initialize(adapterContainer);
 
   if (diResult.isErr()) {
     console.error(`Failed to initialize DI container: ${diResult.error.message}`);
     Deno.exit(1);
   }
 
-  const di = diResult.value;
+  const routerResult = appDI.getMcpRouter();
+  if (routerResult.isErr()) {
+    console.error(`Failed to get MCP router: ${routerResult.error.message}`);
+    Deno.exit(1);
+  }
 
   const app = new Hono();
   app.use(logger());
@@ -43,12 +47,6 @@ async function main() {
       version: "0.3.0",
     });
   });
-
-  const routerResult = di.getMcpRouter();
-  if (routerResult.isErr()) {
-    console.error(`Failed to get MCP router: ${routerResult.error.message}`);
-    Deno.exit(1);
-  }
 
   app.route("/mcp", routerResult.value);
 
