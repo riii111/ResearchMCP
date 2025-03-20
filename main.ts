@@ -8,6 +8,7 @@ import { getServerPort, loadApiKeys } from "./src/config/env.ts";
 import { initializeAdapters } from "./src/config/adapters.ts";
 import { appDI } from "./src/config/AppDI.ts";
 import { ApiError, createErrorResponse } from "./src/adapters/in/http/errors.ts";
+import { error, info } from "./src/config/logger.ts";
 
 /**
  * Main entry point for the HTTP server
@@ -18,7 +19,7 @@ async function main() {
 
   const adapterResult = initializeAdapters(apiKeys);
   if (adapterResult.isErr()) {
-    console.error(`Failed to initialize adapters: ${adapterResult.error.message}`);
+    error(`Failed to initialize adapters: ${adapterResult.error.message}`);
     Deno.exit(1);
   }
 
@@ -26,13 +27,13 @@ async function main() {
   const diResult = appDI.initialize(adapterContainer);
 
   if (diResult.isErr()) {
-    console.error(`Failed to initialize DI container: ${diResult.error.message}`);
+    error(`Failed to initialize DI container: ${diResult.error.message}`);
     Deno.exit(1);
   }
 
   const routerResult = appDI.getMcpRouter();
   if (routerResult.isErr()) {
-    console.error(`Failed to get MCP router: ${routerResult.error.message}`);
+    error(`Failed to get MCP router: ${routerResult.error.message}`);
     Deno.exit(1);
   }
 
@@ -55,7 +56,7 @@ async function main() {
   });
 
   app.onError((err, c) => {
-    console.error(`Error: ${err}`);
+    error(`Error: ${err}`);
 
     if (err instanceof ApiError) {
       return c.json(
@@ -71,12 +72,12 @@ async function main() {
     );
   });
 
-  console.log(`Server running on http://localhost:${port}`);
+  info(`Server running on http://localhost:${port}`);
 
   await Deno.serve({ port }, app.fetch);
 }
 
-main().catch((error) => {
-  console.error("Fatal error:", error);
+main().catch((err) => {
+  error(`Fatal error: ${err}`);
   Deno.exit(1);
 });

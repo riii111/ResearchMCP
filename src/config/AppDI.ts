@@ -10,6 +10,7 @@ import { McpController } from "../adapters/in/mcp/McpController.ts";
 import { SearchController } from "../adapters/in/http/SearchController.ts";
 import { err, ok, Result } from "neverthrow";
 import { AdapterContainer } from "./adapters.ts";
+import { debug, error, info } from "./logger.ts";
 
 export type DIError =
   | { type: "already_initialized"; message: string }
@@ -151,11 +152,6 @@ export class AppDI {
   }
 
   createMcpServer(): Result<McpServer, DIError> {
-    const encoder = new TextEncoder();
-    const log = (message: string) => {
-      Deno.stderr.writeSync(encoder.encode(message + "\n"));
-    };
-
     const server = new McpServer({
       name: "ResearchMCP",
       version: "0.1.0",
@@ -193,7 +189,7 @@ export class AppDI {
       return err(setupResult.error);
     }
 
-    log("MCP server configured with search tool");
+    info("MCP server configured with search tool");
     return ok(server);
   }
 
@@ -208,10 +204,7 @@ export class AppDI {
   }
 
   async startMcpServer(): Promise<Result<void, DIError | Error>> {
-    const encoder = new TextEncoder();
-    Deno.stderr.writeSync(
-      encoder.encode("Starting MCP server with stdio transport...\n"),
-    );
+    info("Starting MCP server with stdio transport...");
 
     const serverResult = this.createMcpServer();
     if (serverResult.isErr()) {
@@ -224,15 +217,13 @@ export class AppDI {
     const result = await this.connectToTransport(server, transport);
 
     if (result.isOk()) {
-      Deno.stderr.writeSync(encoder.encode("MCP server connected via stdio transport\n"));
+      info("MCP server connected via stdio transport");
       return ok(undefined);
     } else {
-      const error = result.error;
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      Deno.stderr.writeSync(
-        encoder.encode(`Failed to start MCP server: ${errorMessage}\n`),
-      );
-      return err(error);
+      const resultError = result.error;
+      const errorMessage = resultError instanceof Error ? resultError.message : "Unknown error";
+      error(`Failed to start MCP server: ${errorMessage}`);
+      return err(resultError);
     }
   }
 
@@ -241,8 +232,19 @@ export class AppDI {
     transport: StdioServerTransport,
   ): Promise<Result<void, Error>> {
     return await server.connect(transport)
-      .then(() => ok(undefined))
-      .catch((error: unknown) => err(error instanceof Error ? error : new Error(String(error))));
+      .then(() => {
+        debug("MCP server transport connected");
+        return ok(undefined);
+      })
+      .catch((transportError: unknown) => {
+        const errorMessage = transportError instanceof Error
+          ? transportError.message
+          : String(transportError);
+        error(`MCP server transport connection failed: ${errorMessage}`);
+        return err(
+          transportError instanceof Error ? transportError : new Error(String(transportError)),
+        );
+      });
   }
 }
 
