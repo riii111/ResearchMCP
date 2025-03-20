@@ -1,4 +1,4 @@
-import { err, ok, Result, ResultAsync } from "neverthrow";
+import { Result, ResultAsync } from "neverthrow";
 import {
   QueryParams,
   SearchError,
@@ -9,6 +9,7 @@ import { QueryCategory } from "../../domain/models/routing.ts";
 import { QueryClassifierPort } from "../ports/out/QueryClassifierPort.ts";
 import { SearchRepository } from "../ports/out/SearchRepository.ts";
 import { debug, info } from "../../config/logger.ts";
+import { err, ok } from "neverthrow";
 
 /**
  * Service for routing search queries to appropriate search repositories
@@ -23,40 +24,40 @@ export class RoutingService {
     params: QueryParams,
     category?: QueryCategory,
   ): ResultAsync<SearchResponse, SearchError> {
-    const categoryResult = category ? ok(category) : this.classifyQuery(params.q);
-
-    if (categoryResult.isErr()) {
-      return ResultAsync.fromPromise(
-        Promise.reject({
-          type: "classification_error",
-          message: categoryResult.error.message,
-        }),
-        (e) => e as SearchError,
+    const categoryResult: ResultAsync<QueryCategory, SearchError> = category
+      ? ResultAsync.fromSafePromise(Promise.resolve(category))
+      // If category is not specified
+      : this.classifyQuery(params.q).match(
+        (validCategory) => ResultAsync.fromSafePromise(Promise.resolve(validCategory)),
+        (error) => ResultAsync.fromPromise(Promise.reject(error), (e) => e as SearchError),
       );
-    }
 
-    const resolvedCategory = categoryResult.value;
+    return categoryResult.andThen((resolvedCategory) =>
+      this.getRepositoriesForCategory(resolvedCategory, params.q).match(
+        (repositories) => {
+          this.logSearchInfo(params, resolvedCategory, repositories);
+          return this.executeParallelSearches(repositories, params);
+        },
+        (error) =>
+          ResultAsync.fromPromise(
+            Promise.reject(error),
+            (e) => e as SearchError,
+          ),
+      )
+    );
+  }
 
-    const repositories = this.getRepositoriesForCategory(resolvedCategory, params.q);
-    if (repositories.length === 0) {
-      return ResultAsync.fromPromise(
-        Promise.reject({
-          type: "no_adapter_available",
-          message: `No repository available for category ${resolvedCategory}`,
-        }),
-        (e) => e as SearchError,
-      );
-    }
-
-    const selectedRepositories = repositories;
-
+  private logSearchInfo(
+    params: QueryParams,
+    category: QueryCategory,
+    repositories: SearchRepository[],
+  ): void {
     info(
-      `[PARALLEL_SEARCH] Query category: ${resolvedCategory}, Query: "${params.q.substring(0, 50)}${
+      `[PARALLEL_SEARCH] Query category: ${category}, Query: "${params.q.substring(0, 50)}${
         params.q.length > 50 ? "..." : ""
       }"`,
     );
 
-    // Log all registered repositories
     info(`[PARALLEL_SEARCH] All registered repositories: ${this.searchRepositories.length}`);
     for (const repo of this.searchRepositories) {
       info(
@@ -70,36 +71,24 @@ export class RoutingService {
       `[PARALLEL_SEARCH] Available repositories: ${
         repositories.map((r) =>
           `${r.getId()} (${r.getName()}, score=${
-            r.getRelevanceScore(params.q, resolvedCategory).toFixed(2)
+            r.getRelevanceScore(params.q, category).toFixed(2)
           })`
         ).join(", ")
       }`,
     );
     info(
       `[PARALLEL_SEARCH] Selected repositories for parallel search: ${
-        selectedRepositories.map((r) => `${r.getId()} (${r.getName()})`).join(", ")
+        repositories.map((r) => `${r.getId()} (${r.getName()})`).join(", ")
       }`,
-    );
-
-    return ResultAsync.fromPromise(
-      this.executeParallelSearches(selectedRepositories, params)
-        .then((result) => {
-          if (result.isErr()) {
-            return Promise.reject(result.error);
-          }
-          return result.value;
-        }),
-      (e) => e as SearchError,
     );
   }
 
-  private async executeParallelSearches(
+  private executeParallelSearches(
     repositories: SearchRepository[],
     params: QueryParams,
-  ): Promise<Result<SearchResponse, SearchError>> {
+  ): ResultAsync<SearchResponse, SearchError> {
     const startTime = Date.now();
 
-    // Log query and selected repositories
     debug(
       `[PARALLEL_SEARCH_DETAIL] Executing search for query: "${params.q}" with ${repositories.length} repositories`,
     );
@@ -110,20 +99,49 @@ export class RoutingService {
       );
     }
 
-    // Execute all search promises
     const searchPromises = repositories.map((repository) => repository.search(params));
-    const searchResults = await Promise.all(searchPromises);
 
-    // Log errors but continue if at least one search succeeded
+    return ResultAsync.fromSafePromise(Promise.all(searchPromises))
+      .andThen((results) => {
+        this.logSearchResults(results, repositories);
+
+        const successResults = results.filter((result) => result.isOk());
+        const failedResults = results.filter((result) => result.isErr());
+
+        if (successResults.length === 0) {
+          if (failedResults.length > 0) {
+            const firstError = failedResults[0];
+            return ResultAsync.fromPromise(
+              Promise.reject(firstError.error),
+              (e) => e as SearchError,
+            );
+          }
+
+          return ResultAsync.fromPromise(
+            Promise.reject({
+              type: "network",
+              message: "All search repositories failed",
+            }),
+            (e) => e as SearchError,
+          );
+        }
+
+        const mergedResults = this.mergeSearchResults(successResults, params, startTime);
+        return ResultAsync.fromSafePromise(Promise.resolve(mergedResults));
+      });
+  }
+
+  private logSearchResults(
+    searchResults: Result<SearchResponse, SearchError>[],
+    repositories: SearchRepository[],
+  ): void {
     const successResults = searchResults.filter((result) => result.isOk());
     const failedResults = searchResults.filter((result) => result.isErr());
 
-    // Log success and failure counts
     info(
       `[PARALLEL_SEARCH_DETAIL] Results: ${successResults.length} succeeded, ${failedResults.length} failed`,
     );
 
-    // Log successful repositories
     for (let i = 0; i < successResults.length; i++) {
       const result = successResults[i];
       if (result.isOk()) {
@@ -139,7 +157,6 @@ export class RoutingService {
       }
     }
 
-    // Log failed repositories
     for (let i = 0; i < failedResults.length; i++) {
       const result = failedResults[i];
       if (result.isErr()) {
@@ -154,21 +171,6 @@ export class RoutingService {
         );
       }
     }
-
-    if (successResults.length === 0) {
-      // If all searches failed, return the first error
-      const firstError = searchResults[0];
-      if (firstError.isErr()) {
-        return err(firstError.error);
-      }
-
-      return err({
-        type: "network",
-        message: "All search repositories failed",
-      });
-    }
-
-    return ok(this.mergeSearchResults(successResults, params, startTime));
   }
 
   private mergeSearchResults(
@@ -233,16 +235,23 @@ export class RoutingService {
       }));
   }
 
-  private getRepositoriesForCategory(category: QueryCategory, query: string): SearchRepository[] {
+  private getRepositoriesForCategory(
+    category: QueryCategory,
+    query: string,
+  ): Result<SearchRepository[], SearchError> {
     const supportingRepositories = this.searchRepositories.filter((repository) =>
       repository.getSupportedCategories().includes(category)
     );
 
-    // Sort by relevance score
-    return supportingRepositories.sort((a, b) => {
+    const sortedRepositories = supportingRepositories.sort((a, b) => {
       const scoreA = a.getRelevanceScore(query, category);
       const scoreB = b.getRelevanceScore(query, category);
-      return scoreB - scoreA; // Higher score first
+      return scoreB - scoreA;
+    });
+
+    return sortedRepositories.length > 0 ? ok(sortedRepositories) : err({
+      type: "no_adapter_available" as const,
+      message: `No repository available for category ${category}`,
     });
   }
 
@@ -259,12 +268,10 @@ export class RoutingService {
 
   private sortByRelevance(results: SearchResult[]): SearchResult[] {
     return results.sort((a, b) => {
-      // If both have relevanceScore, use that
       if (a.relevanceScore !== undefined && b.relevanceScore !== undefined) {
         return b.relevanceScore - a.relevanceScore;
       }
 
-      // Otherwise use rank
       const rankA = a.rank || 100;
       const rankB = b.rank || 100;
       return rankA - rankB;
