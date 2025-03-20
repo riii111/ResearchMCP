@@ -1,11 +1,11 @@
-import { err, ok, Result } from "neverthrow";
+import { err, Result } from "neverthrow";
 import {
   QueryParams,
   SearchError,
   SearchResponse,
   SearchResult,
 } from "../../domain/models/search.ts";
-import { McpError, McpRequest, McpResponse, McpResult } from "../../domain/models/mcp.ts";
+import { McpError, McpRequest, McpResponse } from "../../domain/models/mcp.ts";
 import { SearchUseCase } from "../ports/in/SearchUseCase.ts";
 import { RoutingService } from "./RoutingService.ts";
 
@@ -37,62 +37,51 @@ export class SearchService implements SearchUseCase {
       routing: {},
     };
 
-    const searchResult = await this.multiSearch(queryParams);
-
-    return searchResult.match<Result<McpResponse, McpError>>(
-      (response) => {
-        const results: McpResult[] = response.results.map((result) => ({
+    return (await this.multiSearch(queryParams))
+      .map((response) => ({
+        results: response.results.map((result) => ({
           title: result.title,
           url: result.url,
           snippet: result.snippet,
           published: result.published?.toISOString(),
           source: result.source,
-        }));
+        })),
+        status: "success" as const,
+        source: response.source,
+      }))
+      .mapErr((error) => {
+        const errorHandlers = {
+          network: (e: { message: string }) => `Network error: ${e.message}`,
 
-        return ok({
-          results,
-          status: "success",
-          source: response.source,
-        });
-      },
-      (error) => {
-        let message: string;
+          rateLimit: (e: { message: string; retryAfterMs: number }) =>
+            `Rate limit: Retry after ${Math.floor(e.retryAfterMs / 1000)} seconds`,
 
-        switch (error.type) {
-          case "network":
-            message = `Network error: ${error.message}`;
-            break;
-          case "rateLimit":
-            message = `Rate limit: Retry after ${Math.floor(error.retryAfterMs / 1000)} seconds`;
-            break;
-          case "invalidQuery":
-            message = `Invalid query: ${error.issues.join(", ")}`;
-            // Provide more user-friendly message for encoding errors
-            if (error.issues.some((issue) => issue.includes("cannot be properly encoded"))) {
-              message =
-                "The search query contains characters that cannot be processed by some search engines. We're trying multiple search providers, but some may fail with non-Latin characters or special symbols. Results may be limited.";
-            }
-            break;
-          case "authorization":
-            message = error.message;
-            break;
-          case "classification_error":
-            message = `Query classification error: ${error.message}`;
-            break;
-          case "no_adapter_available":
-            message = `No search provider available: ${error.message}`;
-            break;
-          default:
-            message = "Unknown error";
-        }
+          invalidQuery: (e: { message: string; issues: string[] }) => {
+            return e.issues.some((issue) => issue.includes("cannot be properly encoded"))
+              ? "The search query contains characters that cannot be processed by some search engines. We're trying multiple search providers, but some may fail with non-Latin characters or special symbols. Results may be limited."
+              : `Invalid query: ${e.issues.join(", ")}`;
+          },
 
-        return err({
+          authorization: (e: { message: string }) => e.message,
+
+          classification_error: (e: { message: string }) =>
+            `Query classification error: ${e.message}`,
+
+          no_adapter_available: (e: { message: string }) =>
+            `No search provider available: ${e.message}`,
+        };
+
+        const handler = errorHandlers[error.type as keyof typeof errorHandlers] as (
+          e: SearchError,
+        ) => string;
+        const details = handler ? handler(error) : "Unknown error";
+
+        return {
           type: "search",
           message: "Search failed",
-          details: message,
-        });
-      },
-    );
+          details,
+        };
+      });
   }
 
   filterByRelevance(
