@@ -8,8 +8,8 @@ services:
     environment:
       - BRAVE_API_KEY=${BRAVE_API_KEY}
       - TAVILY_API_KEY=${TAVILY_API_KEY}
-      - STACKEXCHANGE_API_KEY=${STACKEXCHANGE_API_KEY}
-      - GITHUB_API_TOKEN=${GITHUB_API_TOKEN}
+      # - STACKEXCHANGE_API_KEY=${STACKEXCHANGE_API_KEY}
+      # - GITHUB_API_TOKEN=${GITHUB_API_TOKEN}
     volumes:
       - .:/app
       - deno-cache:/home/deno/.cache/deno
