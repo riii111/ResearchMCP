@@ -66,7 +66,7 @@ make d-down   # Stop container
    {
      "mcpServers": {
        "MCPSearch": {
-         "description": "Web search powered by Brave Search API",
+         "description": "Web search powered by Brave, Tavily, etc.",
          "command": "/absolute/path/to/ResearchMCP/cli.ts",
          "args": [],
          "transport": "stdio",
