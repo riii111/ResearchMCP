@@ -19,8 +19,8 @@ jobs:
           deno-version: 'v1.40.x'
 
       - name: Remove existing lockfile
-        # Temporarily remove lockfile only in CI environment due to version incompatibility
-        # This preserves the lockfile in the repository for development consistency
+        # Temporarily remove lockfile only in CI environment due to compatibility issues
+        # The actual lockfile remains in the repository for development consistency
         run: rm -f deno.lock
 
       - name: Update deno.json configuration
@@ -31,4 +31,5 @@ jobs:
         run: deno cache main.ts
 
       - name: Run tests
-        run: deno test
+        # Use the exact same command as defined in deno.json for consistency
+        run: deno task test
