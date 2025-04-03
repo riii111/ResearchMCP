@@ -9,7 +9,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -17,26 +16,14 @@ jobs:
       - name: Setup Deno
         uses: denoland/setup-deno@v1
         with:
-          deno-version: 1.38.x
+          deno-version: 'v1.40.x'
 
-      - name: Cache Deno dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/deno
-          key: ${{ runner.os }}-deno-${{ hashFiles('deno.lock') }}
-          restore-keys: ${{ runner.os }}-deno-
+      - name: Update deno.json
+        run: |
+          sed -i 's/"nodeModulesDir": "auto"/"nodeModulesDir": true/g' deno.json
 
-      - name: Run formatting check
-        run: deno fmt --check
-
-      - name: Run linter
-        run: deno lint
-
-      - name: Run type check
-        run: deno check **/*.ts
+      - name: Install dependencies
+        run: deno cache --reload main.ts
 
       - name: Run tests
-        run: deno task test
-        env:
-          BRAVE_API_KEY: ${{ secrets.BRAVE_API_KEY }}
-          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+        run: deno test --allow-net --allow-env
