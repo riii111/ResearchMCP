@@ -1,27 +1,44 @@
-name: Dependabot Automation
+name: Test
 
-on: pull_request
-
-permissions:
-  contents: write
-  pull-requests: write
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
-  dependabot:
+  test:
     runs-on: ubuntu-latest
-    if: ${{ github.actor == 'dependabot[bot]' }}
+
     steps:
-      - name: Dependabot metadata
-        id: metadata
-        uses: dependabot/fetch-metadata@v1
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v1
         with:
-          github-token: "${{ secrets.GITHUB_TOKEN }}"
-          
-      - name: Auto-approve and merge
-        if: ${{steps.metadata.outputs.update-type != 'version-update:semver-major'}}
+          deno-version: v1.x
+
+      - name: Cache Deno dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/deno
+          key: ${{ runner.os }}-deno-${{ hashFiles('deno.lock') }}
+          restore-keys: ${{ runner.os }}-deno-
+
+      - name: Fix deno.json configuration
         run: |
-          gh pr review --approve "$PR_URL"
-          gh pr merge --auto --merge "$PR_URL"
-        env:
-          PR_URL: ${{github.event.pull_request.html_url}}
-          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          sed -i 's/"nodeModulesDir": "auto"/"nodeModulesDir": true/g' deno.json
+
+      - name: Run formatting check
+        run: deno fmt --check
+
+      - name: Run linter
+        run: deno lint
+
+      - name: Run type check
+        run: deno check **/*.ts
+
+      - name: Run tests
+        run: deno task test
+        # No need for actual API keys as tests use mocks
