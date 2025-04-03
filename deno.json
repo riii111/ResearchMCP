@@ -38,5 +38,5 @@
     "lib": ["DOM", "ESNext"],
     "strict": true
   },
-  "nodeModulesDir": "auto"
+  "nodeModulesDir": true
 }
