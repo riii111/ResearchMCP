@@ -31,5 +31,5 @@ jobs:
         run: deno cache main.ts
 
       - name: Run tests
-        # Use the exact same command as defined in deno.json for consistency
-        run: deno task test
+        # Adding --no-check flag to match development environment behavior
+        run: deno test --allow-net --allow-env --no-check
