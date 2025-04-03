@@ -18,18 +18,13 @@ jobs:
         with:
           deno-version: 'v1.40.x'
 
-      - name: Remove existing lockfile
-        # Temporarily remove lockfile only in CI environment due to compatibility issues
-        # The actual lockfile remains in the repository for development consistency
-        run: rm -f deno.lock
-
-      - name: Update deno.json configuration
+      - name: Remove existing lockfile and update configuration
         run: |
+          rm -f deno.lock
           sed -i 's/"nodeModulesDir": "auto"/"nodeModulesDir": true/g' deno.json
 
       - name: Install dependencies
         run: deno cache main.ts
 
       - name: Run tests
-        # Adding --no-check flag to match development environment behavior
         run: deno test --allow-net --allow-env --no-check
