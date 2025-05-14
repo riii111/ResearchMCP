@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/riii111-researchmcp-badge.png)](https://mseep.ai/app/riii111-researchmcp)
+
 # ResearchMCP
 
 A research tool that combines the Model Context Protocol (MCP) with Brave Search, Tavily Search,
